@@ -77,10 +77,10 @@ async function tryFetchLiveCatalog(onProgress: (n: number) => void) {
         const r = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&page=${p}`);
         const d = await r.json();
         if (!d.results?.length) break;
-        for (const m of (d.results as any[])) {
+        for (const m of (d.results||[])) {
           if (seen.has(`m${m.id}`)) continue;
           seen.add(`m${m.id}`);
-          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map((g: number)=>GENRE_MAP[g]).filter(Boolean) as any[].slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W780+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",services:[] });
+          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W780+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",services:[] });
         }
         if (p%5===0) onProgress(Math.round((p/50)*50));
       } catch(e){}
@@ -90,10 +90,10 @@ async function tryFetchLiveCatalog(onProgress: (n: number) => void) {
         const r = await fetch(`${TMDB_BASE}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US&page=${p}`);
         const d = await r.json();
         if (!d.results?.length) break;
-        for (const t of (d.results as any[])) {
+        for (const t of (d.results||[])) {
           if (seen.has(`t${t.id}`)) continue;
           seen.add(`t${t.id}`);
-          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map((g: number)=>GENRE_MAP[g]).filter(Boolean) as any[].slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W780+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",services:[] });
+          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W780+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",services:[] });
         }
       } catch(e){}
     }
@@ -104,7 +104,7 @@ async function tryFetchLiveCatalog(onProgress: (n: number) => void) {
         const ep = t.type==="movie" ? `${TMDB_BASE}/movie/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}` : `${TMDB_BASE}/tv/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`;
         const r = await fetch(ep);
         const d = await r.json();
-        t.services = (d.results?.US?.flatrate||[]).map((p: any)=>PROVIDER_MAP[p.provider_id]).filter(Boolean) as any[].filter((s: string)=>ALL_SERVICES.includes(s));
+        t.services = (d.results?.US?.flatrate||[]).map(p=>PROVIDER_MAP[p.provider_id]).filter(Boolean) as any[].filter(s=>ALL_SERVICES.includes(s));
       } catch(e){}
     }));
 
