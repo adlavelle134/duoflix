@@ -26,12 +26,7 @@ const SERVICE_COLORS = {
   "Max":"#002BE7","Prime Video":"#00A8E1","Hulu":"#1CE783",
   "Peacock":"#F037A5","Paramount+":"#0064FF",
 };
-const MOCK_USERS = [
-  { id:"u1", name:"Alex Rivera",  avatar:"🎬", services:["Netflix","Disney+","Apple TV+"] },
-  { id:"u2", name:"Jordan Lee",   avatar:"🎥", services:["Netflix","Max","Prime Video"] },
-  { id:"u3", name:"Sam Chen",     avatar:"🎞️", services:["Apple TV+","Hulu","Disney+"] },
-  { id:"u4", name:"Morgan Davis", avatar:"📽️", services:["Netflix","Prime Video"] },
-];
+// No mock users — real users loaded from Supabase
 
 const FALLBACK_CATALOG = [
   {id:"m872585",tmdbId:872585,type:"movie",title:"Oppenheimer",year:"2023",genres:["Drama","History"],poster:"https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",backdrop:"https://image.tmdb.org/t/p/w780/rLb2cwF3Pazuxaj0sRXQ037tGI1.jpg",overview:"The story of J. Robert Oppenheimer and his role in the development of the atomic bomb.",rating:"8.1",services:["Netflix"]},
@@ -442,10 +437,26 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
 // ─── FIND PARTNER ─────────────────────────────────────────────────────────────
 function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom, persistRoom }) {
   const [query, setQuery] = useState("");
-  const results = MOCK_USERS.filter((u)=>u.name.toLowerCase().includes(query.toLowerCase())&&u.id!==currentUser?.id);
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("*")
+      .neq("id", currentUser.id)
+      .then(({ data }) => {
+        setAllUsers(data || []);
+        setLoading(false);
+      });
+  }, []);
+
+  const results = allUsers.filter(u =>
+    u.name.toLowerCase().includes(query.toLowerCase())
+  );
 
   const createRoom = (partner) => {
-    const shared = (currentUser.services||[]).filter(s=>partner.services.includes(s));
+    const shared = (currentUser.services||[]).filter(s=>(partner.services||[]).includes(s));
     let titles = catalog.filter((t)=>t.services.some(s=>shared.includes(s)));
     if (titles.length<20) titles=[...catalog];
     const room={
@@ -460,6 +471,8 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
     onJoinRoom(room);
   };
 
+  const getInitial = (name) => name?.charAt(0).toUpperCase() || "?";
+
   return (
     <div style={S.page}><div style={S.shell}>
       <header style={S.hdr}>
@@ -469,17 +482,28 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
       </header>
       <input style={S.input} placeholder="Search by name..." value={query} onChange={e=>setQuery(e.target.value)} autoFocus/>
       <div style={{marginTop:16}}>
+        {loading && <p style={S.muted}>Loading users...</p>}
+        {!loading && allUsers.length === 0 && (
+          <div style={S.empty}>
+            <div style={{fontSize:48}}>👥</div>
+            <p>No other users yet — share the app and invite friends to sign up!</p>
+          </div>
+        )}
+        {!loading && allUsers.length > 0 && results.length === 0 && query && (
+          <p style={S.muted}>No users found matching "{query}"</p>
+        )}
         {results.map((u)=>(
           <div key={u.id} style={S.userCard}>
-            <div style={{fontSize:30}}>{u.avatar}</div>
+            <div style={{width:42,height:42,borderRadius:"50%",background:"linear-gradient(135deg,#f97316,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:18,flexShrink:0}}>
+              {getInitial(u.name)}
+            </div>
             <div style={{flex:1}}>
               <div style={{color:"#fff",fontWeight:600}}>{u.name}</div>
-              <div style={S.muted}>{u.services.join(", ")}</div>
+              <div style={S.muted}>{(u.services||[]).slice(0,3).join(", ")}{(u.services||[]).length>3 ? " +more" : ""}</div>
             </div>
             <button style={S.btnSm} onClick={()=>createRoom(u)}>Invite</button>
           </div>
         ))}
-        {query&&results.length===0&&<p style={S.muted}>No users found.</p>}
       </div>
     </div></div>
   );
