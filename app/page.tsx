@@ -62,7 +62,7 @@ const FALLBACK_CATALOG = [
 ];
 
 // ─── TMDB CATALOG FETCHER ────────────────────────────────────────────────────
-async function tryFetchLiveCatalog(onProgress) {
+async function tryFetchLiveCatalog(onProgress: (n: number) => void) {
   try {
     const test = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&page=1`);
     if (!test.ok) return null;
