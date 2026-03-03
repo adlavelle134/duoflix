@@ -104,7 +104,7 @@ async function tryFetchLiveCatalog(onProgress: (n: number) => void) {
         const ep = t.type==="movie" ? `${TMDB_BASE}/movie/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}` : `${TMDB_BASE}/tv/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`;
         const r = await fetch(ep);
         const d = await r.json();
-        t.services = (d.results?.US?.flatrate||[]).map(p=>PROVIDER_MAP[p.provider_id]).filter(Boolean) as any[].filter(s=>ALL_SERVICES.includes(s));
+        t.services = (d.results?.US?.flatrate||[]).map(p=>PROVIDER_MAP[p.provider_id]).filter(Boolean).filter(s=>ALL_SERVICES.includes(s));
       } catch(e){}
     }));
 
@@ -156,10 +156,10 @@ async function loadRoomsFromDB(userId, catalog) {
       id: r.id,
       partner: { id:r.partner_id, name:r.partner_name, avatar:r.partner_avatar, services:r.partner_services||[] },
       sharedServices: r.shared_services||[],
-      queue: (r.queue_ids||[]).map((id: string)=>map[id]).filter(Boolean) as any[],
+      queue: (r.queue_ids||[]).map(id=>map[id]).filter(Boolean),
       userSwipes: r.user_swipes||{},
       partnerSwipes: r.partner_swipes||{},
-      matches: (r.match_ids||[]).map((id: string)=>map[id]).filter(Boolean) as any[],
+      matches: (r.match_ids||[]).map(id=>map[id]).filter(Boolean),
     }));
   } catch(e) { return []; }
 }
