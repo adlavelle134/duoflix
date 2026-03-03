@@ -1,5 +1,4 @@
 "use client";
-// @ts-nocheck
 
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabaseClient";
@@ -63,7 +62,7 @@ const FALLBACK_CATALOG = [
 ];
 
 // ─── TMDB CATALOG FETCHER ────────────────────────────────────────────────────
-async function tryFetchLiveCatalog(onProgress: (n: number) => void) {
+async function tryFetchLiveCatalog(onProgress) {
   try {
     const test = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&page=1`);
     if (!test.ok) return null;
@@ -99,7 +98,7 @@ async function tryFetchLiveCatalog(onProgress: (n: number) => void) {
     }
 
     onProgress(65);
-    await Promise.all(all.slice(0,200).map(async (t: any) => {
+    await Promise.all(all.slice(0,200).map(async (t) => {
       try {
         const ep = t.type==="movie" ? `${TMDB_BASE}/movie/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}` : `${TMDB_BASE}/tv/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`;
         const r = await fetch(ep);
@@ -138,7 +137,7 @@ async function saveRoomToDB(room, userId) {
       partner_avatar: room.partner.avatar,
       partner_services: room.partner.services,
       shared_services: room.sharedServices,
-      queue_ids: room.queue.map((t: any)=>t.id),
+      queue_ids: room.queue.map((t)=>t.id),
       user_swipes: room.userSwipes,
       partner_swipes: room.partnerSwipes,
       match_ids: (room.matches||[]).map(t=>t.id),
@@ -149,10 +148,10 @@ async function saveRoomToDB(room, userId) {
 
 async function loadRoomsFromDB(userId, catalog) {
   try {
-    const map = Object.fromEntries(catalog.map((t: any)=>[t.id,t]));
+    const map = Object.fromEntries(catalog.map((t)=>[t.id,t]));
     const { data } = await supabase.from("rooms").select("*").eq("owner_id", userId).order("updated_at", { ascending: false });
     if (!data?.length) return [];
-    return data.map((r: any) => ({
+    return data.map((r) => ({
       id: r.id,
       partner: { id:r.partner_id, name:r.partner_name, avatar:r.partner_avatar, services:r.partner_services||[] },
       sharedServices: r.shared_services||[],
@@ -412,7 +411,7 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
 
       {rooms.length===0
         ?<div style={S.empty}><div style={{fontSize:52}}>🎬</div><p>No rooms yet — find a partner to start swiping!</p></div>
-        :rooms.map((r: any)=>{
+        :rooms.map((r)=>{
           const swiped=Object.keys(r.userSwipes||{}).length;
           const pct=Math.round((swiped/Math.max(r.queue?.length||1,1))*100);
           return(
@@ -443,11 +442,11 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
 // ─── FIND PARTNER ─────────────────────────────────────────────────────────────
 function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom, persistRoom }) {
   const [query, setQuery] = useState("");
-  const results = MOCK_USERS.filter((u: any)=>u.name.toLowerCase().includes(query.toLowerCase())&&u.id!==currentUser?.id);
+  const results = MOCK_USERS.filter((u)=>u.name.toLowerCase().includes(query.toLowerCase())&&u.id!==currentUser?.id);
 
   const createRoom = (partner) => {
     const shared = (currentUser.services||[]).filter(s=>partner.services.includes(s));
-    let titles = catalog.filter((t: any)=>t.services.some(s=>shared.includes(s)));
+    let titles = catalog.filter((t)=>t.services.some(s=>shared.includes(s)));
     if (titles.length<20) titles=[...catalog];
     const room={
       id:`room-${Date.now()}`, partner, sharedServices:shared,
@@ -470,7 +469,7 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
       </header>
       <input style={S.input} placeholder="Search by name..." value={query} onChange={e=>setQuery(e.target.value)} autoFocus/>
       <div style={{marginTop:16}}>
-        {results.map((u: any)=>(
+        {results.map((u)=>(
           <div key={u.id} style={S.userCard}>
             <div style={{fontSize:30}}>{u.avatar}</div>
             <div style={{flex:1}}>
@@ -501,7 +500,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const queue   = room.queue||[];
   const current = queue[idx];
   const done    = idx>=queue.length;
-  const matches = queue.filter((t: any)=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
+  const matches = queue.filter((t)=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
 
   const swipe = (dir) => {
     if (!current||exitingRef.current) return;
@@ -634,7 +633,7 @@ function MatchesScreen({ room, onBack }) {
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
-function genSwipes(titles){const s={};titles.forEach((t: any)=>{s[t.id]=Math.random()>0.42?"like":"pass";});return s;}
+function genSwipes(titles){const s={};titles.forEach((t)=>{s[t.id]=Math.random()>0.42?"like":"pass";});return s;}
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const S={
