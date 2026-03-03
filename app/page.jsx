@@ -123,19 +123,19 @@ async function upsertProfile(userId, name, services) {
 }
 
 async function saveRoomToDB(room, userId) {
-  try {
-    await supabase.from("rooms").upsert({
-      id: room.id,
-      owner_id: userId,
-      partner_id: room.partner.id,
-      partner_name: room.partner.name,
-      partner_avatar: room.partner.avatar,
-      partner_services: room.partner.services,
-      shared_services: room.sharedServices,
-      queue_ids: room.queue.map((t)=>t.id),
-      updated_at: new Date().toISOString(),
-    });
-  } catch(e) {}
+  const { error } = await supabase.from("rooms").upsert({
+    id: room.id,
+    owner_id: userId,
+    partner_id: room.partner.id,
+    partner_name: room.partner.name,
+    partner_avatar: room.partner.avatar,
+    partner_services: room.partner.services,
+    shared_services: room.sharedServices,
+    queue_ids: room.queue.map((t)=>t.id),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) console.error("saveRoomToDB error:", error);
+  return !error;
 }
 
 // Save a single swipe to the swipes table
@@ -219,7 +219,10 @@ async function loadRoomsFromDB(userId, catalog) {
     }));
 
     return rooms;
-  } catch(e) { return []; }
+  } catch(e) {
+    console.error("loadRoomsFromDB error:", e);
+    return [];
+  }
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
@@ -270,16 +273,21 @@ export default function DuoFlix() {
   useEffect(() => {
     if (!authUser || !catalogReady || !profile) return;
     loadRoomsFromDB(authUser.id, catalog).then(saved => {
-      if (saved.length) setRooms(saved);
+      setRooms(saved || []);
     });
   }, [authUser, catalogReady, profile]);
 
-  const persistRoom = (room, swipedTitleId, swipeDir) => {
-    if (authUser) {
-      saveRoomToDB(room, authUser.id);
-      if (swipedTitleId && swipeDir) {
-        saveSwipeToDB(room.id, authUser.id, swipedTitleId, swipeDir);
-      }
+  const persistRoom = async (room, swipedTitleId, swipeDir) => {
+    if (!authUser) return;
+    await saveRoomToDB(room, authUser.id);
+    if (swipedTitleId && swipeDir) {
+      const { error } = await supabase.from("swipes").upsert({
+        room_id: room.id,
+        user_id: authUser.id,
+        title_id: swipedTitleId,
+        direction: swipeDir,
+      }, { onConflict: "room_id,user_id,title_id" });
+      if (error) console.error("saveSwipe error:", error);
     }
   };
 
