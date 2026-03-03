@@ -166,24 +166,50 @@ async function loadSwipesForRoom(roomId) {
 async function loadRoomsFromDB(userId, catalog) {
   try {
     const map = Object.fromEntries(catalog.map((t)=>[t.id,t]));
+
     // Load rooms where user is owner OR partner
     const { data: owned } = await supabase.from("rooms").select("*").eq("owner_id", userId);
     const { data: partnered } = await supabase.from("rooms").select("*").eq("partner_id", userId);
-    const allRooms = [...(owned||[]), ...(partnered||[])];
+
+    // Merge and deduplicate
+    const seen = new Set();
+    const allRooms = [...(owned||[]), ...(partnered||[])].filter(r => {
+      if (seen.has(r.id)) return false;
+      seen.add(r.id);
+      return true;
+    });
+
     if (!allRooms.length) return [];
 
     const rooms = await Promise.all(allRooms.map(async (r) => {
       const swipesByUser = await loadSwipesForRoom(r.id);
       const mySwipes = swipesByUser[userId] || {};
+
       // Partner is whoever is NOT the current user
       const partnerId = r.owner_id === userId ? r.partner_id : r.owner_id;
       const partnerSwipes = swipesByUser[partnerId] || {};
+
       const queue = (r.queue_ids||[]).map(id=>map[id]).filter(Boolean);
-      // Real matches: both users swiped like
-      const matches = queue.filter(t => mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like");
+
+      // True matches: BOTH users swiped like
+      const matches = queue.filter(t =>
+        mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like"
+      );
+
+      // Figure out who the partner is — handle both owner and partner perspective
+      let partnerInfo;
+      if (r.owner_id === userId) {
+        // I am the owner, partner is the invited user
+        partnerInfo = { id: r.partner_id, name: r.partner_name, avatar: r.partner_avatar, services: r.partner_services||[] };
+      } else {
+        // I am the partner, owner is the other person — load their profile
+        const { data: ownerProfile } = await supabase.from("profiles").select("*").eq("id", r.owner_id).single();
+        partnerInfo = { id: r.owner_id, name: ownerProfile?.name||"Unknown", avatar: "😊", services: ownerProfile?.services||[] };
+      }
+
       return {
         id: r.id,
-        partner: { id:r.partner_id, name:r.partner_name, avatar:r.partner_avatar, services:r.partner_services||[] },
+        partner: partnerInfo,
         sharedServices: r.shared_services||[],
         queue,
         userSwipes: mySwipes,
@@ -191,6 +217,7 @@ async function loadRoomsFromDB(userId, catalog) {
         matches,
       };
     }));
+
     return rooms;
   } catch(e) { return []; }
 }
@@ -296,7 +323,16 @@ export default function DuoFlix() {
     <HomeScreen
       profile={profile} rooms={rooms}
       onSearch={()=>setScreen("search")}
-      onOpenRoom={(r)=>{ setActiveRoom(r); setScreen("swipe"); }}
+      onOpenRoom={async (r)=>{
+    // Reload fresh swipes before entering room
+    const swipesByUser = await loadSwipesForRoom(r.id);
+    const mySwipes = swipesByUser[authUser.id] || {};
+    const partnerId = r.partner?.id;
+    const partnerSwipes = swipesByUser[partnerId] || {};
+    const matches = (r.queue||[]).filter(t => mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like");
+    setActiveRoom({...r, userSwipes: mySwipes, partnerSwipes, matches});
+    setScreen("swipe");
+  }}
       onSignOut={handleSignOut}
       onEditProfile={()=>setScreen("setup")}
     />
