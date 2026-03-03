@@ -133,28 +133,65 @@ async function saveRoomToDB(room, userId) {
       partner_services: room.partner.services,
       shared_services: room.sharedServices,
       queue_ids: room.queue.map((t)=>t.id),
-      user_swipes: room.userSwipes,
-      partner_swipes: room.partnerSwipes,
-      match_ids: (room.matches||[]).map(t=>t.id),
       updated_at: new Date().toISOString(),
     });
   } catch(e) {}
 }
 
+// Save a single swipe to the swipes table
+async function saveSwipeToDB(roomId, userId, titleId, direction) {
+  try {
+    await supabase.from("swipes").upsert({
+      room_id: roomId,
+      user_id: userId,
+      title_id: titleId,
+      direction,
+    }, { onConflict: "room_id,user_id,title_id" });
+  } catch(e) {}
+}
+
+// Load all swipes for a room — returns { [userId]: { [titleId]: direction } }
+async function loadSwipesForRoom(roomId) {
+  try {
+    const { data } = await supabase.from("swipes").select("*").eq("room_id", roomId);
+    const byUser = {};
+    for (const s of (data||[])) {
+      if (!byUser[s.user_id]) byUser[s.user_id] = {};
+      byUser[s.user_id][s.title_id] = s.direction;
+    }
+    return byUser;
+  } catch(e) { return {}; }
+}
+
 async function loadRoomsFromDB(userId, catalog) {
   try {
     const map = Object.fromEntries(catalog.map((t)=>[t.id,t]));
-    const { data } = await supabase.from("rooms").select("*").eq("owner_id", userId).order("updated_at", { ascending: false });
-    if (!data?.length) return [];
-    return data.map((r) => ({
-      id: r.id,
-      partner: { id:r.partner_id, name:r.partner_name, avatar:r.partner_avatar, services:r.partner_services||[] },
-      sharedServices: r.shared_services||[],
-      queue: (r.queue_ids||[]).map(id=>map[id]).filter(Boolean),
-      userSwipes: r.user_swipes||{},
-      partnerSwipes: r.partner_swipes||{},
-      matches: (r.match_ids||[]).map(id=>map[id]).filter(Boolean),
+    // Load rooms where user is owner OR partner
+    const { data: owned } = await supabase.from("rooms").select("*").eq("owner_id", userId);
+    const { data: partnered } = await supabase.from("rooms").select("*").eq("partner_id", userId);
+    const allRooms = [...(owned||[]), ...(partnered||[])];
+    if (!allRooms.length) return [];
+
+    const rooms = await Promise.all(allRooms.map(async (r) => {
+      const swipesByUser = await loadSwipesForRoom(r.id);
+      const mySwipes = swipesByUser[userId] || {};
+      // Partner is whoever is NOT the current user
+      const partnerId = r.owner_id === userId ? r.partner_id : r.owner_id;
+      const partnerSwipes = swipesByUser[partnerId] || {};
+      const queue = (r.queue_ids||[]).map(id=>map[id]).filter(Boolean);
+      // Real matches: both users swiped like
+      const matches = queue.filter(t => mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like");
+      return {
+        id: r.id,
+        partner: { id:r.partner_id, name:r.partner_name, avatar:r.partner_avatar, services:r.partner_services||[] },
+        sharedServices: r.shared_services||[],
+        queue,
+        userSwipes: mySwipes,
+        partnerSwipes,
+        matches,
+      };
     }));
+    return rooms;
   } catch(e) { return []; }
 }
 
@@ -210,8 +247,13 @@ export default function DuoFlix() {
     });
   }, [authUser, catalogReady, profile]);
 
-  const persistRoom = (room) => {
-    if (authUser) saveRoomToDB(room, authUser.id);
+  const persistRoom = (room, swipedTitleId, swipeDir) => {
+    if (authUser) {
+      saveRoomToDB(room, authUser.id);
+      if (swipedTitleId && swipeDir) {
+        saveSwipeToDB(room.id, authUser.id, swipedTitleId, swipeDir);
+      }
+    }
   };
 
   const handleSignOut = async () => {
@@ -463,7 +505,7 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
       id:`room-${Date.now()}`, partner, sharedServices:shared,
       queue:shuffle([...titles]),
       userSwipes:{},
-      partnerSwipes:genSwipes(titles),
+      partnerSwipes:{},
       matches:[],
     };
     setRooms(p=>[...p,room]);
@@ -532,15 +574,18 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
     setExiting(dir);
     const ns={...swipes,[current.id]:dir};
     setSwipes(ns); room.userSwipes=ns;
-    if (dir==="like"&&room.partnerSwipes[current.id]==="like") {
-      if (!(room.matches||[]).some(m=>m.id===current.id)) {
-        room.matches=[...(room.matches||[]),current];
-        onMatch(room);
-        setTimeout(()=>setNewMatch(current),150);
-        setTimeout(()=>setNewMatch(null),2700);
+    if (dir==="like") {
+      // Check if partner has already swiped like on this title
+      if (room.partnerSwipes[current.id]==="like") {
+        if (!(room.matches||[]).some(m=>m.id===current.id)) {
+          room.matches=[...(room.matches||[]),current];
+          onMatch(room);
+          setTimeout(()=>setNewMatch(current),150);
+          setTimeout(()=>setNewMatch(null),2700);
+        }
       }
     }
-    persistRoom(room);
+    persistRoom(room, current.id, dir);
     setTimeout(()=>{ setIdx(i=>i+1); setExiting(null); setDragX(0); exitingRef.current=false; },320);
   };
 
