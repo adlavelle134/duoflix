@@ -1331,62 +1331,176 @@ function PosterButterMeUp() {
   return (
     <svg width="158" height="237" viewBox="0 0 158 237" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="romBg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ff6b9d"/>
-          <stop offset="50%" stopColor="#c44569"/>
-          <stop offset="100%" stopColor="#f8a5c2"/>
+        <linearGradient id="bmu_bg" x1="0" y1="0" x2="0.3" y2="1">
+          <stop offset="0%" stopColor="#1a0030"/>
+          <stop offset="35%" stopColor="#3d0042"/>
+          <stop offset="70%" stopColor="#6b0050"/>
+          <stop offset="100%" stopColor="#1a0020"/>
         </linearGradient>
-        <radialGradient id="microGlow" cx="50%" cy="55%" r="45%">
-          <stop offset="0%" stopColor="#ffd32a" stopOpacity="0.5"/>
-          <stop offset="100%" stopColor="#ffd32a" stopOpacity="0"/>
+        <linearGradient id="bmu_titlebar" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0"/>
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.95"/>
+        </linearGradient>
+        <radialGradient id="bmu_spot1" cx="32%" cy="48%" r="38%">
+          <stop offset="0%" stopColor="#f472b6" stopOpacity="0.55"/>
+          <stop offset="100%" stopColor="#f472b6" stopOpacity="0"/>
         </radialGradient>
+        <radialGradient id="bmu_spot2" cx="68%" cy="48%" r="38%">
+          <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.45"/>
+          <stop offset="100%" stopColor="#fbbf24" stopOpacity="0"/>
+        </radialGradient>
+        <radialGradient id="bmu_heartglow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ff1493" stopOpacity="0.7"/>
+          <stop offset="100%" stopColor="#ff1493" stopOpacity="0"/>
+        </radialGradient>
+        <filter id="bmu_glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="bmu_softblur">
+          <feGaussianBlur stdDeviation="2"/>
+        </filter>
+        <clipPath id="bmu_clip">
+          <rect width="158" height="237" rx="10"/>
+        </clipPath>
       </defs>
-      <rect width="158" height="237" fill="url(#romBg)" rx="10"/>
-      {/* Soft bokeh circles */}
-      {[[20,30,18],[130,25,14],[10,80,10],[148,70,12],[15,160,16],[140,155,10],[79,20,20]].map(([x,y,r],i)=>(
-        <circle key={i} cx={x} cy={y} r={r} fill="white" opacity="0.07"/>
-      ))}
-      {/* Microwave */}
-      <rect x="24" y="95" width="110" height="80" rx="8" fill="#2d3436"/>
-      <rect x="30" y="101" width="72" height="62" rx="4" fill="#1a1a2e"/>
-      {/* Microwave glow */}
-      <ellipse cx="66" cy="132" rx="28" ry="22" fill="url(#microGlow)"/>
-      {/* Kernel 1 - left */}
-      <ellipse cx="55" cy="132" rx="10" ry="13" fill="#FFF9C4"/>
-      <circle cx="51" cy="128" r="3" fill="#1a1a2e"/>
-      <circle cx="59" cy="128" r="3" fill="#1a1a2e"/>
-      <circle cx="52" cy="127" r="1" fill="white"/>
-      <circle cx="60" cy="127" r="1" fill="white"/>
-      <path d="M51 136 Q55 140 59 136" stroke="#1a1a2e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-      {/* Heart between them */}
-      <path d="M66 128 C66 125 69 123 71 126 C73 123 76 125 76 128 C76 131 71 135 71 135 C71 135 66 131 66 128Z" fill="#ff6b9d"/>
-      {/* Kernel 2 - right */}
-      <ellipse cx="83" cy="132" rx="10" ry="13" fill="#FFF176"/>
-      <circle cx="79" cy="128" r="3" fill="#1a1a2e"/>
-      <circle cx="87" cy="128" r="3" fill="#1a1a2e"/>
-      <circle cx="80" cy="127" r="1" fill="white"/>
-      <circle cx="88" cy="127" r="1" fill="white"/>
-      <path d="M79 136 Q83 140 87 136" stroke="#1a1a2e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-      {/* Microwave controls */}
-      <rect x="106" y="105" width="22" height="50" rx="3" fill="#374151"/>
-      {[[112,112],[112,122],[112,132],[112,142],[112,152]].map(([x,y],i)=>(
-        <circle key={i} cx={x} cy={y} r="3" fill={i===0?"#ffd32a":"#6b7280"}/>
-      ))}
-      <rect x="108" y="108" width="8" height="4" rx="1" fill="#10b981"/>
-      {/* Floating hearts */}
-      {[[35,60,8],[115,50,6],[25,130,5],[140,120,7],[70,45,5]].map(([x,y,s],i)=>(
-        <path key={i} d={`M${x} ${y} C${x} ${y-s*0.6} ${x+s*0.8} ${y-s} ${x+s} ${y-s*0.3} C${x+s*1.2} ${y-s} ${x+s*2} ${y-s*0.6} ${x+s*2} ${y} C${x+s*2} ${y+s*0.8} ${x+s} ${y+s*1.5} ${x+s} ${y+s*1.5} C${x+s} ${y+s*1.5} ${x} ${y+s*0.8} ${x} ${y}Z`}
-          fill="white" opacity="0.25"/>
-      ))}
-      {/* Title */}
-      <rect x="0" y="185" width="158" height="52" fill="rgba(0,0,0,0.5)" rx="0"/>
-      <text x="79" y="205" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="Arial">BUTTER ME UP</text>
-      <path d="M20 210 L138 210" stroke="#ffd32a" strokeWidth="0.8" opacity="0.5"/>
-      <text x="79" y="222" textAnchor="middle" fill="#ffd32a" fontSize="6.5" fontFamily="Arial">A LOVE STORY · COMING NEVER</text>
-      <text x="79" y="232" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="5.5" fontFamily="Arial">★★★★★  "I cried." — KERNEL</text>
+      <g clipPath="url(#bmu_clip)">
+        <rect width="158" height="237" fill="url(#bmu_bg)"/>
+        <ellipse cx="52" cy="110" rx="65" ry="80" fill="url(#bmu_spot1)"/>
+        <ellipse cx="106" cy="110" rx="65" ry="80" fill="url(#bmu_spot2)"/>
+        {/* Bokeh background lights */}
+        {[[14,22,11],[142,15,9],[6,88,13],[152,72,10],[22,158,9],[146,148,11],[79,12,7],[38,175,6],[125,168,7],[65,8,5],[110,18,6]].map(([x,y,r],i)=>(
+          <g key={"bk"+i}>
+            <circle cx={x} cy={y} r={r} fill="white" opacity="0.04" filter="url(#bmu_softblur)"/>
+            <circle cx={x} cy={y} r={r*0.9} fill="none" stroke="white" strokeWidth="0.8" opacity="0.07"/>
+          </g>
+        ))}
+        {/* Rose petal scatter */}
+        {[[18,38,14,-25],[138,52,11,30],[10,112,9,-40],[152,98,12,45],[60,25,8,-18],[108,22,10,35],[28,168,7,-20],[134,162,9,22],[79,175,6,0],[45,58,6,15],[118,48,5,-10]].map(([x,y,s,rot],i)=>(
+          <ellipse key={"pe"+i} cx={x} cy={y} rx={s*0.38} ry={s*0.72} fill="#f472b6" opacity="0.22" transform={"rotate("+rot+" "+x+" "+y+")"}/>
+        ))}
+        {/* Gold sparkle stars */}
+        {[[42,32],[118,25],[18,142],[148,128],[79,172],[30,72],[132,78],[65,185],[100,190]].map(([x,y],i)=>(
+          <g key={"st"+i}>
+            <line x1={x-5} y1={y} x2={x+5} y2={y} stroke="#fbbf24" strokeWidth="0.9" opacity="0.55"/>
+            <line x1={x} y1={y-5} x2={x} y2={y+5} stroke="#fbbf24" strokeWidth="0.9" opacity="0.55"/>
+            <line x1={x-3} y1={y-3} x2={x+3} y2={y+3} stroke="#fbbf24" strokeWidth="0.6" opacity="0.35"/>
+            <line x1={x+3} y1={y-3} x2={x-3} y2={y+3} stroke="#fbbf24" strokeWidth="0.6" opacity="0.35"/>
+            <circle cx={x} cy={y} r="1.2" fill="#fbbf24" opacity="0.9"/>
+          </g>
+        ))}
+        {/* CHARACTER 1 — glamorous kernel in gown, left */}
+        {/* Gown / dress skirt */}
+        <path d="M36 115 Q28 142 22 170 L78 170 Q72 142 68 115 Z" fill="#9333ea"/>
+        <path d="M36 115 Q28 142 22 170 L32 170 Q36 142 44 115 Z" fill="#7e22ce" opacity="0.6"/>
+        {/* Dress shimmer lines */}
+        <line x1="52" y1="116" x2="48" y2="168" stroke="white" strokeWidth="0.5" opacity="0.25"/>
+        <line x1="58" y1="116" x2="54" y2="168" stroke="white" strokeWidth="0.4" opacity="0.15"/>
+        <line x1="46" y1="116" x2="42" y2="168" stroke="white" strokeWidth="0.4" opacity="0.15"/>
+        {/* Dress gem details */}
+        <circle cx="52" cy="125" r="1.5" fill="white" opacity="0.5"/>
+        <circle cx="48" cy="133" r="1.2" fill="white" opacity="0.4"/>
+        <circle cx="56" cy="140" r="1.2" fill="white" opacity="0.4"/>
+        <circle cx="44" cy="148" r="1" fill="white" opacity="0.3"/>
+        {/* Char 1 body */}
+        <ellipse cx="52" cy="108" rx="14" ry="10" fill="#fef3c7"/>
+        {/* Char 1 head */}
+        <ellipse cx="52" cy="87" rx="16" ry="20" fill="#fef9c3"/>
+        <ellipse cx="52" cy="85" rx="14" ry="17" fill="#fef3c7"/>
+        {/* Char 1 hair — flowing updo */}
+        <ellipse cx="52" cy="70" rx="14" ry="8" fill="#7c2d12"/>
+        <ellipse cx="52" cy="67" rx="12" ry="6" fill="#92400e"/>
+        <ellipse cx="62" cy="72" rx="6" ry="9" fill="#7c2d12"/>
+        <ellipse cx="42" cy="72" rx="6" ry="9" fill="#7c2d12"/>
+        <circle cx="56" cy="64" r="4" fill="#fbbf24" opacity="0.9"/>
+        <circle cx="56" cy="64" r="2.5" fill="#fcd34d"/>
+        {/* Char 1 face */}
+        <ellipse cx="47" cy="84" rx="3.5" ry="4" fill="#1a0030"/>
+        <ellipse cx="57" cy="84" rx="3.5" ry="4" fill="#1a0030"/>
+        <ellipse cx="47.5" cy="83" rx="1.5" ry="1.8" fill="white" opacity="0.85"/>
+        <ellipse cx="57.5" cy="83" rx="1.5" ry="1.8" fill="white" opacity="0.85"/>
+        {/* Eyelashes */}
+        <line x1="44" y1="80" x2="42" y2="77" stroke="#1a0030" strokeWidth="1.2"/>
+        <line x1="47" y1="79" x2="46" y2="76" stroke="#1a0030" strokeWidth="1.2"/>
+        <line x1="50" y1="79" x2="50" y2="76" stroke="#1a0030" strokeWidth="1.2"/>
+        {/* Lips */}
+        <path d="M48 93 Q52 97 56 93" stroke="#e11d48" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        <path d="M48 93 Q52 91 56 93" stroke="#fb7185" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+        {/* Blush */}
+        <ellipse cx="44" cy="89" rx="5" ry="3" fill="#fca5a5" opacity="0.45"/>
+        <ellipse cx="60" cy="89" rx="5" ry="3" fill="#fca5a5" opacity="0.45"/>
+        {/* Char 1 necklace */}
+        <path d="M42 108 Q52 114 62 108" stroke="#fbbf24" strokeWidth="1.5" fill="none"/>
+        <circle cx="52" cy="113" r="2.5" fill="#fbbf24"/>
+        <circle cx="52" cy="113" r="1.5" fill="#fcd34d"/>
+        {/* CHARACTER 2 — dashing kernel in tuxedo, right */}
+        {/* Tuxedo trousers */}
+        <path d="M92 115 Q88 142 84 170 L128 170 Q124 142 122 115 Z" fill="#1e1b4b"/>
+        <line x1="106" y1="116" x2="106" y2="168" stroke="white" strokeWidth="0.5" opacity="0.15"/>
+        {/* Jacket */}
+        <path d="M92 108 L88 115 L84 170 L128 170 L124 115 L120 108 Z" fill="#0f172a"/>
+        {/* Jacket lapels */}
+        <path d="M106 108 L98 120 L106 118 Z" fill="#1e293b"/>
+        <path d="M106 108 L114 120 L106 118 Z" fill="#1e293b"/>
+        {/* Shirt / chest */}
+        <rect x="101" y="108" width="10" height="22" fill="white" opacity="0.9" rx="1"/>
+        <circle cx="106" cy="113" r="1.2" fill="#94a3b8"/>
+        <circle cx="106" cy="118" r="1.2" fill="#94a3b8"/>
+        <circle cx="106" cy="123" r="1.2" fill="#94a3b8"/>
+        {/* Gold bow tie */}
+        <path d="M100 109 L103 113 L106 110 L109 113 L112 109 L109 106 L106 109 L103 106 Z" fill="#fbbf24"/>
+        <circle cx="106" cy="109" r="2.2" fill="#f59e0b"/>
+        {/* Pocket square */}
+        <path d="M120 110 L123 108 L125 111 L122 112 Z" fill="#f472b6" opacity="0.9"/>
+        {/* Char 2 body */}
+        <ellipse cx="106" cy="108" rx="15" ry="10" fill="#fef3c7"/>
+        {/* Char 2 head */}
+        <ellipse cx="106" cy="87" rx="16" ry="20" fill="#fef9c3"/>
+        <ellipse cx="106" cy="85" rx="14" ry="17" fill="#fef3c7"/>
+        {/* Char 2 hair — slicked back */}
+        <ellipse cx="106" cy="70" rx="14" ry="7" fill="#1e1b4b"/>
+        <ellipse cx="106" cy="68" rx="12" ry="5" fill="#312e81"/>
+        <path d="M94 72 Q106 66 118 72" stroke="#1e1b4b" strokeWidth="3" fill="none"/>
+        {/* Char 2 face */}
+        <ellipse cx="101" cy="84" rx="3.5" ry="4" fill="#1a0030"/>
+        <ellipse cx="111" cy="84" rx="3.5" ry="4" fill="#1a0030"/>
+        <ellipse cx="101.5" cy="83" rx="1.5" ry="1.8" fill="white" opacity="0.85"/>
+        <ellipse cx="111.5" cy="83" rx="1.5" ry="1.8" fill="white" opacity="0.85"/>
+        {/* Char 2 eyebrows */}
+        <path d="M98 79 Q101 77 104 79" stroke="#1a0030" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+        <path d="M108 79 Q111 77 114 79" stroke="#1a0030" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+        {/* Smile */}
+        <path d="M102 93 Q106 97 110 93" stroke="#1a0030" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        {/* Blush */}
+        <ellipse cx="98" cy="89" rx="5" ry="3" fill="#fca5a5" opacity="0.4"/>
+        <ellipse cx="114" cy="89" rx="5" ry="3" fill="#fca5a5" opacity="0.4"/>
+        {/* HEART CENTER — glowing */}
+        <ellipse cx="79" cy="100" rx="12" ry="11" fill="url(#bmu_heartglow)" filter="url(#bmu_softblur)"/>
+        <path d="M70 97 C70 90 75 86 79 91 C83 86 88 90 88 97 C88 104 79 112 79 112 C79 112 70 104 70 97Z" fill="#ff1493" filter="url(#bmu_glow)"/>
+        <path d="M72 95 C72 89 76 86 79 91 C82 86 86 89 86 95 C86 101 79 109 79 109 C79 109 72 101 72 95Z" fill="#ff6eb4"/>
+        <path d="M74 91 C74 88 77 87 79 90 C81 87 84 88 84 91" stroke="white" strokeWidth="1" fill="none" opacity="0.6" strokeLinecap="round"/>
+        {/* Holding hands arc */}
+        <path d="M64 113 Q71 120 79 118 Q87 120 94 113" stroke="#fbbf24" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.8"/>
+        {/* Tiny floating hearts */}
+        {[[24,58,4],[138,45,3],[16,128,3.5],[148,115,4],[79,168,3],[55,175,2.5],[108,178,2.5]].map(([x,y,s],i)=>(
+          <path key={"fh"+i} d={"M"+x+" "+y+" C"+x+" "+(y-s*0.7)+" "+(x+s*0.8)+" "+(y-s*1.1)+" "+(x+s)+" "+(y-s*0.4)+" C"+(x+s*1.2)+" "+(y-s*1.1)+" "+(x+s*2)+" "+(y-s*0.7)+" "+(x+s*2)+" "+y+" C"+(x+s*2)+" "+(y+s*0.9)+" "+(x+s)+" "+(y+s*1.6)+" "+(x+s)+" "+(y+s*1.6)+" C"+(x+s)+" "+(y+s*1.6)+" "+x+" "+(y+s*0.9)+" "+x+" "+y+"Z"}
+            fill="#f472b6" opacity="0.4"/>
+        ))}
+        {/* Gradient fade to title */}
+        <rect x="0" y="158" width="158" height="79" fill="url(#bmu_titlebar)"/>
+        {/* Title block */}
+        <text x="79" y="178" textAnchor="middle" fill="rgba(244,114,182,0.7)" fontSize="4.5" fontFamily="Arial" letterSpacing="2.5">KERNEL PICTURES PRESENTS</text>
+        <rect x="12" y="182" width="134" height="0.6" fill="rgba(255,255,255,0.12)"/>
+        <text x="79" y="198" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="Georgia, serif" letterSpacing="1.5">BUTTER ME UP</text>
+        <text x="79" y="210" textAnchor="middle" fill="#fbbf24" fontSize="6" fontFamily="Georgia, serif" fontStyle="italic">Some love stories are just... hotter.</text>
+        <rect x="20" y="214" width="118" height="0.6" fill="rgba(255,255,255,0.12)"/>
+        <text x="79" y="223" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="4.5" fontFamily="Arial" letterSpacing="1.5">COMING SOON  ·  RATED PG-13</text>
+        <text x="79" y="233" textAnchor="middle" fill="rgba(244,114,182,0.65)" fontSize="4.5" fontFamily="Arial">"I cried. I laughed. I popped." — KERNEL THE CRITIC</text>
+      </g>
     </svg>
   );
 }
+
 
 function TutorialScreen({ profile, catalog, onComplete }) {
   const [step, setStep]             = useState(0);
