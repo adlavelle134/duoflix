@@ -388,7 +388,7 @@ export default function DuoFlix() {
 function Spinner() {
   return (
     <div style={{...S.page,flexDirection:"column",gap:16}}>
-      <div style={S.bigLogo}>🍿 DuoFlix</div>
+      <div style={S.bigLogo}>DuoFlix</div>
       <div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading...</div>
     </div>
   );
@@ -420,7 +420,7 @@ function AuthScreen({ onAuth }) {
 
   return (
     <div style={S.page}><div style={S.onWrap}>
-      <div style={S.bigLogo}>🍿 DuoFlix</div>
+      <div style={S.bigLogo}>DuoFlix</div>
       <p style={{color:"rgba(255,255,255,0.5)",fontSize:13,textAlign:"center",marginBottom:28,marginTop:0,fontStyle:"italic",lineHeight:1.6}}>Swipe together. Match together. Watch together.</p>
 
       <input style={{...S.input,marginBottom:10}} type="email" placeholder="Email address"
@@ -457,7 +457,7 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
   return (
     <div style={S.page}><div style={S.onWrap}>
       {step===0&&<>
-        <div style={S.bigLogo}>🍿 DuoFlix</div>
+        <div style={S.bigLogo}>DuoFlix</div>
         <div style={{color:"#fff",fontSize:16,fontWeight:600,marginBottom:4}}>Welcome! Let's set up your profile</div>
         <p style={{...S.muted,marginBottom:20}}>{email}</p>
         <div style={{width:"100%",marginBottom:8}}>
@@ -526,7 +526,7 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
   return (
     <div style={S.page}><div style={S.shell}>
       <header style={S.hdr}>
-        <div style={S.logo}>🍿 DuoFlix</div>
+        <div style={S.logo}>DuoFlix</div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {rooms.length>0&&!editMode&&(
             <button onClick={()=>setEditMode(true)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.6)",fontSize:13,padding:"6px 12px",cursor:"pointer"}}>
