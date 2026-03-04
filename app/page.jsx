@@ -1531,7 +1531,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
     { kernel: "Ohh look, it's me! I get to be your first friend (not like you actually have a choice muhahaha) 🍿", sub: "Tap 'Invite' next to my name and let's get the magic started!" },
     { kernel: "Welcome to your swipe room! Now pay attention — this is important.", sub: "Swipe LEFT on anything you'd rather watch paint dry than sit through." },
     { kernel: "Now swipe RIGHT on something you actually want to watch!", sub: "Go on, I already liked it. We're basically soulmates now. ❤️❤️" },
-    { kernel: "BOOM — a match! 🎉 You two have great taste. Kernel approves.", sub: "Tap that ❤️ button up top to see all your matches!" },
+    { kernel: "BOOM — a match! 🎉 You have great taste. Kernel approves.", sub: "Tap that ❤️ button up top to see all your matches!" },
     { kernel: "These are your matches! They only show up here when BOTH of you swipe right.", sub: "Tap the 🔔 bell on the home screen — that's where I'll ping you when new matches happen!" },
     { kernel: "Once you've actually watched something — mark it! ✅", sub: "Hit 'Mark Watched' and it'll move to your watched pile. Kernel keeps track of everything." },
     { kernel: "Look at you! All grown up and ready to swipe! 🎬", sub: "Captain Kernel believes in you. Now go find something great to watch." },
