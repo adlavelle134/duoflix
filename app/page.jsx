@@ -154,10 +154,13 @@ async function saveRoomToDB(room, userId) {
     owner_id: userId,
     partner_id: room.partner.id,
     partner_name: room.partner.name,
-    partner_avatar: room.partner.avatar,
+    partner_avatar: room.partner.avatar || "😊",
     partner_services: room.partner.services,
     shared_services: room.sharedServices,
-    queue_ids: room.queue.map((t)=>t.id),
+    queue_ids: room.queue.slice(0,200).map((t)=>t.id),
+    content_type: room.contentType || "both",
+    genres: room.genres || [],
+    watched_ids: room.watchedIds || [],
     updated_at: new Date().toISOString(),
   });
   if (error) console.error("saveRoomToDB error:", error);
@@ -243,6 +246,7 @@ async function loadRoomsFromDB(userId, catalog) {
         matches,
         contentType: r.content_type || "both",
         genres: r.genres || [],
+        watchedIds: r.watched_ids || [],
       };
     }));
 
@@ -253,17 +257,46 @@ async function loadRoomsFromDB(userId, catalog) {
   }
 }
 
+// ─── NOTIFICATION HELPERS ────────────────────────────────────────────────────
+async function sendNotification(userId, type, message, roomId) {
+  try {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type,
+      message,
+      room_id: roomId,
+      read: false,
+    });
+  } catch(e) { console.error("sendNotification error:", e); }
+}
+
+async function loadNotifications(userId) {
+  try {
+    const { data } = await supabase.from("notifications")
+      .select("*").eq("user_id", userId).eq("read", false)
+      .order("created_at", { ascending: false }).limit(20);
+    return data || [];
+  } catch(e) { return []; }
+}
+
+async function markNotificationsRead(userId) {
+  try {
+    await supabase.from("notifications").update({ read: true }).eq("user_id", userId);
+  } catch(e) {}
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function DuoFlix() {
-  const [screen, setScreen]       = useState("loading"); // loading | auth | setup | home | search | swipe | matches
-  const [authUser, setAuthUser]   = useState(null);      // Supabase auth user
-  const [profile, setProfile]     = useState(null);      // { name, services }
+  const [screen, setScreen]       = useState("loading");
+  const [authUser, setAuthUser]   = useState(null);
+  const [profile, setProfile]     = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const [rooms, setRooms]         = useState([]);
   const [catalog, setCatalog]     = useState([]);
   const [loadProgress, setLoadProgress] = useState(0);
   const [catalogReady, setCatalogReady] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   // 1. Check Supabase session on mount
   useEffect(() => {
@@ -303,6 +336,13 @@ export default function DuoFlix() {
     loadRoomsFromDB(authUser.id, catalog).then(saved => {
       setRooms(saved || []);
     });
+    // Load notifications
+    loadNotifications(authUser.id).then(setNotifications);
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(() => {
+      loadNotifications(authUser.id).then(setNotifications);
+    }, 30000);
+    return () => clearInterval(interval);
   }, [authUser, catalogReady, profile]);
 
   const persistRoom = async (room, swipedTitleId, swipeDir) => {
@@ -327,7 +367,7 @@ export default function DuoFlix() {
   // ── Screen routing ──
   if (screen === "loading" || screen === "loadingProfile") return <Spinner />;
   if (screen === "auth")    return <AuthScreen onAuth={(u) => { setAuthUser(u); setScreen("loadingProfile"); }} />;
-  if (screen === "setup")   return (
+  if (screen === "setup" && !profile) return (
     <ProfileSetup
       email={authUser?.email}
       catalogReady={catalogReady} loadProgress={loadProgress} usingFallback={usingFallback}
@@ -336,6 +376,17 @@ export default function DuoFlix() {
         setProfile({ name, services });
         setScreen("home");
       }}
+    />
+  );
+  if (screen === "setup" && profile) return (
+    <ProfilePage
+      profile={profile} email={authUser?.email}
+      onSave={async (name, services) => {
+        await upsertProfile(authUser.id, name, services);
+        setProfile({ name, services });
+        setScreen("home");
+      }}
+      onBack={()=>setScreen("home")}
     />
   );
   if (screen === "search") return (
@@ -353,11 +404,29 @@ export default function DuoFlix() {
       persistRoom={persistRoom} />
   );
   if (screen === "matches" && activeRoom) return (
-    <MatchesScreen room={activeRoom} onBack={()=>setScreen("swipe")} />
+    <MatchesScreen room={activeRoom} onBack={()=>setScreen("swipe")}
+      onToggleWatched={async (titleId) => {
+        const current = activeRoom.watchedIds || [];
+        const updated = current.includes(titleId)
+          ? current.filter(id=>id!==titleId)
+          : [...current, titleId];
+        const updatedRoom = {...activeRoom, watchedIds: updated};
+        setActiveRoom(updatedRoom);
+        // Save to DB
+        await supabase.from("rooms").update({ watched_ids: updated }).eq("id", activeRoom.id);
+        // Update rooms list too
+        setRooms(prev => prev.map(r => r.id===activeRoom.id ? {...r, watchedIds: updated} : r));
+      }}
+    />
   );
   return (
     <HomeScreen
       profile={profile} rooms={rooms}
+      notifications={notifications}
+      onClearNotifications={async () => {
+        await markNotificationsRead(authUser.id);
+        setNotifications([]);
+      }}
       onSearch={()=>setScreen("search")}
       onOpenRoom={async (r)=>{
     // Reload fresh swipes before entering room
@@ -502,8 +571,9 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
 }
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
-function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms }) {
+function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms }) {
   const [showMenu, setShowMenu]   = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
   const [editMode, setEditMode]   = useState(false);
   const [selected, setSelected]   = useState(new Set());
   const [confirming, setConfirming] = useState(false);
@@ -533,6 +603,27 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
               Edit
             </button>
           )}
+          <div style={{position:"relative"}}>
+            <button onClick={()=>{ setShowNotifs(p=>!p); if(!showNotifs&&notifications.length>0) onClearNotifications(); }}
+              style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.6)",fontSize:16,padding:"6px 10px",cursor:"pointer",position:"relative"}}>
+              🔔
+              {notifications.length>0&&<span style={{position:"absolute",top:-4,right:-4,background:"#ef4444",borderRadius:"50%",width:16,height:16,fontSize:10,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{notifications.length}</span>}
+            </button>
+            {showNotifs&&(
+              <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,zIndex:50,minWidth:260,maxWidth:300,overflow:"hidden"}}>
+                <div style={{padding:"12px 16px 8px",color:"#fff",fontWeight:700,fontSize:13,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>Notifications</div>
+                {notifications.length===0
+                  ?<div style={{padding:"16px",color:"rgba(255,255,255,0.4)",fontSize:13,textAlign:"center"}}>No new notifications</div>
+                  :notifications.map(n=>(
+                    <div key={n.id} style={{padding:"10px 16px",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+                      <div style={{color:"#fff",fontSize:13}}>{n.message}</div>
+                      <div style={{color:"rgba(255,255,255,0.3)",fontSize:11,marginTop:2}}>{new Date(n.created_at).toLocaleDateString()}</div>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+          </div>
           {editMode&&(
             <button onClick={cancelEdit} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.6)",fontSize:13,padding:"6px 12px",cursor:"pointer"}}>
               Cancel
@@ -662,6 +753,8 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
     };
     setRooms(p=>[...p,room]);
     persistRoom(room);
+    // Notify partner that a room was created
+    sendNotification(partner.id, "new_room", `${currentUser.name} invited you to a watch room!`, room.id);
     onJoinRoom(room);
   };
 
@@ -777,6 +870,8 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
         if (!(room.matches||[]).some(m=>m.id===current.id)) {
           room.matches=[...(room.matches||[]),current];
           onMatch(room);
+          // Notify partner about the match
+          sendNotification(room.partner.id, "match", `🎉 You matched on "${current.title}"!`, room.id);
           setTimeout(()=>setNewMatch(current),150);
           setTimeout(()=>setNewMatch(null),2700);
         }
@@ -914,8 +1009,12 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 }
 
 // ─── MATCHES ──────────────────────────────────────────────────────────────────
-function MatchesScreen({ room, onBack }) {
+function MatchesScreen({ room, onBack, onToggleWatched }) {
   const matches=(room.queue||[]).filter(t=>room.userSwipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
+  const watchedIds = room.watchedIds || [];
+  const unwatched = matches.filter(t=>!watchedIds.includes(t.id));
+  const watched   = matches.filter(t=>watchedIds.includes(t.id));
+
   return (
     <div style={S.page}><div style={S.shell}>
       <header style={S.hdr}>
@@ -926,20 +1025,109 @@ function MatchesScreen({ room, onBack }) {
       <p style={{...S.muted,marginBottom:12}}>You & {room.partner.name} both want to watch:</p>
       {matches.length===0
         ?<div style={S.empty}><div style={{fontSize:48}}>😅</div><p>No matches yet — keep swiping!</p></div>
-        :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,overflowY:"auto"}}>
-          {matches.map(t=>(
-            <div key={t.id} style={S.matchCard}>
-              {t.poster?<img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>:<div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>}
-              <div style={{padding:"8px 8px 10px"}}>
-                <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:4,lineHeight:1.3}}>{t.title}</div>
-                <div style={{display:"flex",gap:3,flexWrap:"wrap",justifyContent:"center"}}>
-                  {t.services.map(s=><span key={s} style={{background:SERVICE_COLORS[s]||"#444",borderRadius:3,padding:"1px 5px",fontSize:9,color:"#fff"}}>{s}</span>)}
+        :<div style={{overflowY:"auto"}}>
+          {/* Unwatched */}
+          {unwatched.length>0&&<>
+            <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Up Next ({unwatched.length})</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+              {unwatched.map(t=>(
+                <div key={t.id} style={S.matchCard}>
+                  {t.poster?<img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>:<div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>}
+                  <div style={{padding:"8px 8px 10px"}}>
+                    <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6,lineHeight:1.3}}>{t.title}</div>
+                    <div style={{display:"flex",gap:3,flexWrap:"wrap",justifyContent:"center",marginBottom:6}}>
+                      {t.services.map(s=><span key={s} style={{background:SERVICE_COLORS[s]||"#444",borderRadius:3,padding:"1px 5px",fontSize:9,color:"#fff"}}>{s}</span>)}
+                    </div>
+                    <button onClick={()=>onToggleWatched(t.id)}
+                      style={{width:"100%",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,color:"#22c55e",fontSize:11,fontWeight:600,padding:"5px",cursor:"pointer"}}>
+                      ✓ Mark Watched
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          </>}
+          {/* Watched */}
+          {watched.length>0&&<>
+            <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Watched ({watched.length})</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              {watched.map(t=>(
+                <div key={t.id} style={{...S.matchCard,opacity:0.5}}>
+                  <div style={{position:"relative"}}>
+                    {t.poster?<img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>:<div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>}
+                    <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>✅</div>
+                  </div>
+                  <div style={{padding:"8px 8px 10px"}}>
+                    <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6,lineHeight:1.3}}>{t.title}</div>
+                    <button onClick={()=>onToggleWatched(t.id)}
+                      style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,color:"rgba(255,255,255,0.4)",fontSize:11,padding:"5px",cursor:"pointer"}}>
+                      ↩ Unmark
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>}
         </div>
       }
+    </div></div>
+  );
+}
+
+// ─── PROFILE PAGE ────────────────────────────────────────────────────────────
+function ProfilePage({ profile, email, onSave, onBack }) {
+  const [name, setName]       = useState(profile.name || "");
+  const [services, setServices] = useState(profile.services || []);
+  const [saving, setSaving]   = useState(false);
+  const [saved, setSaved]     = useState(false);
+  const toggle = (s) => setServices(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
+
+  const handleSave = async () => {
+    if (!name || !services.length) return;
+    setSaving(true);
+    await onSave(name, services);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(()=>setSaved(false), 2000);
+  };
+
+  return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={onBack}>←</button>
+        <div style={S.logo}>DuoFlix</div>
+        <div style={{width:40}}/>
+      </header>
+
+      <div style={{color:"#fff",fontSize:20,fontWeight:700,marginBottom:4}}>Your Profile</div>
+      <div style={{...S.muted,marginBottom:24}}>{email}</div>
+
+      {/* Name */}
+      <div style={{marginBottom:20}}>
+        <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Display Name</div>
+        <input style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your name..."/>
+      </div>
+
+      {/* Streaming services */}
+      <div style={{marginBottom:28}}>
+        <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Streaming Services</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+          {ALL_SERVICES.map(s=>(
+            <button key={s} onClick={()=>toggle(s)} style={{...S.chip,
+              background:services.includes(s)?SERVICE_COLORS[s]:"rgba(255,255,255,0.07)",
+              borderColor:services.includes(s)?SERVICE_COLORS[s]:"rgba(255,255,255,0.15)",
+              color:services.includes(s)?"#fff":"#999"
+            }}>{s}</button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        style={{...S.btn,width:"100%",marginTop:"auto",opacity:name&&services.length?1:0.4,
+          background:saved?"linear-gradient(135deg,#22c55e,#16a34a)":"linear-gradient(135deg,#f97316,#ec4899)"}}
+        onClick={handleSave} disabled={saving||!name||!services.length}>
+        {saved ? "✓ Saved!" : saving ? "Saving..." : "Save Changes"}
+      </button>
     </div></div>
   );
 }
