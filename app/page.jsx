@@ -388,27 +388,7 @@ export default function DuoFlix() {
 function Spinner() {
   return (
     <div style={{...S.page,flexDirection:"column",gap:16}}>
-      <svg width="90" height="88" viewBox="0 0 90 88" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="45" cy="11" r="8" fill="#FFF176"/>
-  <circle cx="32" cy="15" r="7" fill="#FFF9C4"/>
-  <circle cx="58" cy="15" r="7" fill="#FFF176"/>
-  <circle cx="22" cy="24" r="6" fill="#FFF9C4"/>
-  <circle cx="68" cy="24" r="6" fill="#FFF176"/>
-  <circle cx="38" cy="9" r="6" fill="#FFF176"/>
-  <circle cx="52" cy="9" r="6" fill="#FFF9C4"/>
-  <circle cx="45" cy="22" r="7" fill="#FFF9C4"/>
-  <circle cx="28" cy="28" r="6" fill="#FFF176"/>
-  <circle cx="62" cy="28" r="6" fill="#FFF9C4"/>
-  <circle cx="17" cy="34" r="5" fill="#FFF176"/>
-  <circle cx="73" cy="34" r="5" fill="#FFF9C4"/>
-  <path d="M20 40 L25 78 L65 78 L70 40 Z" fill="#ffffff"/>
-  <path d="M20 40 L25 78 L30 78 L25 40 Z" fill="#E53935"/>
-  <path d="M34 40 L39 78 L44 78 L39 40 Z" fill="#E53935"/>
-  <path d="M48 40 L53 78 L58 78 L53 40 Z" fill="#E53935"/>
-  <path d="M62 40 L65 78 L70 78 L70 40 Z" fill="#E53935"/>
-  <rect x="17" y="36" width="56" height="7" rx="3.5" fill="#E53935"/>
-</svg>
-<div style={S.bigLogo}>DuoFlix</div>
+      <div style={S.bigLogo}>DuoFlix</div>
       <div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading...</div>
     </div>
   );
