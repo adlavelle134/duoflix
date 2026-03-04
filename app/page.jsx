@@ -663,7 +663,7 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
               <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
                 <button style={S.menuItem} onClick={()=>{onEditProfile();setShowMenu(false);}}>✏️ Edit Profile</button>
                 <button style={S.menuItem} onClick={()=>{onViewStats();setShowMenu(false);}}>📊 My Stats</button>
-                <button style={S.menuItem} onClick={()=>{onRestartTutorial();setShowMenu(false);}}>🍿 Tutorial</button>
+                <button style={S.menuItem} onClick={()=>{onRestartTutorial();setShowMenu(false);}}>🍿 Kernel's Tutorial</button>
                 <button style={{...S.menuItem,color:"#ef4444"}} onClick={onSignOut}>🚪 Sign Out</button>
               </div>
             )}
@@ -1106,11 +1106,11 @@ function MatchesScreen({ room, onBack, onToggleWatched }) {
 // ─── FLIXIE TUTORIAL ─────────────────────────────────────────────────────────
 
 // Flixie SVG mascot — popcorn bucket with eyes and mouth
-function Flixie({ size = 80, animate = false }) {
+function Kernel({ size = 80, animate = false }) {
   return (
     <div style={{
       width: size, height: size,
-      animation: animate ? "flixieBounce 0.6s ease infinite alternate" : "none",
+      animation: animate ? "kernelBounce 0.6s ease infinite alternate" : "none",
       display: "inline-block",
       filter: "drop-shadow(0 8px 24px rgba(249,115,22,0.4))"
     }}>
@@ -1149,11 +1149,11 @@ function Flixie({ size = 80, animate = false }) {
         <circle cx="68" cy="72" r="5" fill="#ffb3ba" opacity="0.6"/>
       </svg>
       <style>{`
-        @keyframes flixieBounce {
+        @keyframes kernelBounce {
           from { transform: translateY(0px) rotate(-3deg); }
           to   { transform: translateY(-8px) rotate(3deg); }
         }
-        @keyframes flixiePop {
+        @keyframes kernelPop {
           0%   { transform: scale(0.5); opacity: 0; }
           70%  { transform: scale(1.15); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
@@ -1172,13 +1172,13 @@ function Flixie({ size = 80, animate = false }) {
 }
 
 // Speech bubble with Flixie
-function FlixieBubble({ message, subtext, style = {} }) {
+function KernelBubble({ message, subtext, style = {} }) {
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
       animation: "slideUp 0.4s ease", ...style
     }}>
-      <Flixie size={90} animate={true}/>
+      <Kernel size={90} animate={true}/>
       <div style={{
         background: "rgba(255,255,255,0.96)", borderRadius: 18, padding: "14px 20px",
         maxWidth: 280, textAlign: "center", position: "relative",
@@ -1227,23 +1227,23 @@ function TutorialScreen({ profile, catalog, onComplete }) {
   const dragStart = useRef(null);
   const exitingRef = useRef(false);
 
-  const FLIXIE_USER = {
-    id: "flixie-demo", name: "Flixie 🍿",
+  const KERNEL_USER = {
+    id: "kernel-demo", name: "Kernel 🍿",
     services: ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+","Peacock","Paramount+"]
   };
 
   // Steps: 0=intro, 1=home, 2=find partner, 3=room created, 4=swipe left, 5=swipe right, 6=match, 7=notifications, 8=watched, 9=done
   const steps = [
-    { flixie: "Hey there, superstar! 🎉 I'm Flixie, your personal popcorn guide!", sub: "I'll walk you through DuoFlix in about 2 minutes. Try not to eat me." },
-    { flixie: "This is your home screen! It's where all your watch rooms live.", sub: "Think of rooms like movie dates — one for each person you watch with. Fancy, right?" },
-    { flixie: "First things first — tap 'Find a Watch Partner' down below!", sub: "Go on, I won't bite. I'm a bag of popcorn." },
-    { flixie: "Ooh look, it's me! 👋 I've been waiting here for AGES.", sub: "Tap 'Invite' next to my name and let's create our room!" },
-    { flixie: "Welcome to your swipe room! Now pay attention — this is important.", sub: "Swipe LEFT on anything you'd rather watch paint dry than sit through." },
-    { flixie: "Now swipe RIGHT on something you actually want to watch!", sub: "Go on, I already liked it. We're basically soulmates now. 🎬" },
-    { flixie: "IT'S A MATCH! 🎉 We both want to watch that!", sub: "See that ❤️ button in the top right? Tap it to see your matches!" },
-    { flixie: "These are your matches! Only shows up when BOTH of you swipe right.", sub: "Tap the 🔔 bell on the home screen — that's where I'll ping you when new matches happen!" },
-    { flixie: "Once you've watched something together, mark it watched!", sub: "Hit 'Mark Watched' so it moves out of your queue. No rewatching unless you really want to." },
-    { flixie: "You're officially a DuoFlix pro! 🍿🎬", sub: "Now go find a real watch partner and start swiping. I'll be here if you need me!" },
+    { kernel: "Hey! I'm Kernel. Part popcorn, part genius, full-time movie enthusiast. 🍿", sub: "I'll be your guide today. Try not to spill me." },
+    { kernel: "Welcome to your home screen! This is where the magic happens.", sub: "Or where nothing happens if you don't find a partner. No pressure." },
+    { kernel: "First things first — tap 'Find a Watch Partner' down below!", sub: "It's big, orange, and very enthusiastic. Hard to miss." },
+    { kernel: "Ohh look, it's me! I get to be your first friend (not like you actually have a choice muhahaha) 🍿", sub: "Tap 'Invite' next to my name and let's get the magic started!" },
+    { kernel: "Welcome to your swipe room! Now pay attention — this is important.", sub: "Swipe LEFT on anything you'd rather watch paint dry than sit through." },
+    { kernel: "Now swipe RIGHT on something you actually want to watch!", sub: "Go on, I already liked it. We're basically soulmates now. ❤️❤️" },
+    { kernel: "BOOM — a match! 🎉 You two have great taste. Kernel approves.", sub: "Tap that ❤️ button up top to see all your matches!" },
+    { kernel: "These are your matches! They only show up here when BOTH of you swipe right.", sub: "Tap the 🔔 bell on the home screen — that's where I'll ping you when new matches happen!" },
+    { kernel: "Once you've actually watched something — mark it! ✅", sub: "Hit 'Mark Watched' and it'll move to your watched pile. Kernel keeps track of everything." },
+    { kernel: "Look at you! All grown up and ready to swipe! 🎬", sub: "Captain Kernel believes in you. Now go find something great to watch." },
   ];
 
   const current = steps[step];
@@ -1278,12 +1278,12 @@ function TutorialScreen({ profile, catalog, onComplete }) {
   if (step === 0) return (
     <div style={{...S.page, flexDirection:"column", justifyContent:"flex-start", alignItems:"center", padding:"40px 28px 40px", boxSizing:"border-box", gap:28, overflowY:"auto"}}>
       <div style={S.bigLogo}>DuoFlix</div>
-      <div style={{animation:"flixiePop 0.5s ease"}}>
-        <Flixie size={130} animate={true}/>
+      <div style={{animation:"kernelPop 0.5s ease"}}>
+        <Kernel size={130} animate={true}/>
       </div>
       <div style={{textAlign:"center", width:"100%"}}>
-        <div style={{color:"#fff",fontSize:24,fontWeight:800,marginBottom:12}}>Meet Flixie! 🍿</div>
-        <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.flixie}</div>
+        <div style={{color:"#fff",fontSize:24,fontWeight:800,marginBottom:12}}>Meet Kernel. 🍿</div>
+        <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.kernel}</div>
         <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6,marginTop:8}}>{current.sub}</div>
       </div>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12,width:"100%"}}>
@@ -1311,7 +1311,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
       </div>
       {/* Flixie overlay */}
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px 32px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:12,background:"linear-gradient(to top, rgba(14,14,26,0.98) 60%, transparent)"}}>
-        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+        <KernelBubble message={current.kernel} subtext={current.sub}/>
         <button style={{...S.btn,width:"100%"}} onClick={next}>Got it! →</button>
       </div>
     </div>
@@ -1335,7 +1335,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
         <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.5)} 50%{box-shadow:0 0 0 12px rgba(249,115,22,0)} }`}</style>
       </div>
       <div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+        <KernelBubble message={current.kernel} subtext={current.sub}/>
       </div>
     </div>
   );
@@ -1349,12 +1349,12 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           <div style={S.logo}>Find Partner</div>
           <div style={{width:40}}/>
         </header>
-        <input style={S.input} placeholder="Search by name..." defaultValue="Flixie" readOnly/>
+        <input style={S.input} placeholder="Search by name..." defaultValue="Kernel" readOnly/>
         <div style={{marginTop:16}}>
           <div style={{...S.userCard, border:"1px solid rgba(249,115,22,0.5)", background:"rgba(249,115,22,0.08)"}}>
             <div style={{width:42,height:42,borderRadius:"50%",background:"linear-gradient(135deg,#f97316,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🍿</div>
             <div style={{flex:1}}>
-              <div style={{color:"#fff",fontWeight:600}}>Flixie 🍿</div>
+              <div style={{color:"#fff",fontWeight:600}}>Kernel 🍿</div>
               <div style={S.muted}>Netflix · Disney+ · Max · +5 more</div>
             </div>
             <button style={{...S.btnSm, animation:"pulse 1.2s ease infinite"}} onClick={next}>Invite</button>
@@ -1362,7 +1362,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
         </div>
       </div>
       <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center"}}>
-        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+        <KernelBubble message={current.kernel} subtext={current.sub}/>
       </div>
     </div>
   );
@@ -1374,7 +1374,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
       <div style={S.page}><div style={S.shell}>
         <header style={S.hdr}>
           <div style={{color:"#fff",fontWeight:700,fontSize:14,textAlign:"center"}}>
-            <div>Flixie 🍿</div>
+            <div>Kernel 🍿</div>
             <div style={{...S.muted,fontSize:10}}>Netflix · Disney+</div>
           </div>
           <button style={S.matchBadge}>❤️ 0</button>
@@ -1406,10 +1406,10 @@ function TutorialScreen({ profile, catalog, onComplete }) {
             <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)",animation:"pulse 1.2s ease infinite"}} onClick={()=>handleSwipe("pass")}>✕</button>
             <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)",opacity:0.3,cursor:"not-allowed"}} onClick={()=>setWrongSwipe(true)}>♥</button>
           </div>
-          {wrongSwipe&&<div style={{color:"#f97316",fontSize:12,textAlign:"center",marginTop:8,animation:"slideUp 0.3s ease"}}>👈 Nope! Flixie says swipe LEFT on this one!</div>}
+          {wrongSwipe&&<div style={{color:"#f97316",fontSize:12,textAlign:"center",marginTop:8,animation:"slideUp 0.3s ease"}}>👈 Wrong way! Kernel points LEFT — hit that ✕!</div>}
         </div>
         <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-          <FlixieBubble message={wrongSwipe?"Psst! The ✕ button! LEFT! Do I need to draw you a map? 🗺️":current.flixie} subtext={wrongSwipe?"Swipe left = skip. Got it? Good.":current.sub}/>
+          <KernelBubble message={wrongSwipe?"Wrong way, superstar! Kernel points left! ← That one!":current.kernel} subtext={wrongSwipe?"Swipe left = skip. You've got this!":current.sub}/>
         </div>
       </div></div>
     );
@@ -1422,7 +1422,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
       <div style={S.page}><div style={S.shell}>
         <header style={S.hdr}>
           <div style={{color:"#fff",fontWeight:700,fontSize:14,textAlign:"center"}}>
-            <div>Flixie 🍿</div>
+            <div>Kernel 🍿</div>
             <div style={{...S.muted,fontSize:10}}>Netflix · Disney+</div>
           </div>
           <button style={S.matchBadge}>❤️ 0</button>
@@ -1465,7 +1465,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           {wrongSwipe&&<div style={{color:"#f97316",fontSize:12,textAlign:"center",marginTop:8,animation:"slideUp 0.3s ease"}}>👉 Other way! Flixie believes in you. Mostly.</div>}
         </div>
         <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-          <FlixieBubble message={wrongSwipe?"Really?! The ♥ button! RIGHT! We just went over this! 🤦":current.flixie} subtext={wrongSwipe?"Swipe right = want to watch. You've got this!":current.sub}/>
+          <KernelBubble message={wrongSwipe?"Wrong button, champ! Tap the ♥ — Kernel's rooting for you! 💪":current.kernel} subtext={wrongSwipe?"Swipe right = want to watch. Almost there!":current.sub}/>
         </div>
       </div></div>
     );
@@ -1475,7 +1475,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
   if (step === 6) return (
     <div style={S.page}><div style={S.shell}>
       <header style={S.hdr}>
-        <div style={{color:"#fff",fontWeight:700,fontSize:14}}>Flixie 🍿</div>
+        <div style={{color:"#fff",fontWeight:700,fontSize:14}}>Kernel 🍿</div>
         <button style={{...S.matchBadge, animation:"pulse 1.2s ease infinite"}} onClick={next}>❤️ 1</button>
       </header>
       <div style={S.progBar}><div style={{...S.progFill,width:"100%"}}/></div>
@@ -1486,7 +1486,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
         <button style={S.btn} onClick={next}>See 1 Match →</button>
       </div>
       <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+        <KernelBubble message={current.kernel} subtext={current.sub}/>
       </div>
     </div></div>
   );
@@ -1528,7 +1528,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:40,height:56,background:"rgba(255,255,255,0.07)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🍿</div>
               <div>
-                <div style={{color:"#fff",fontWeight:600}}>Flixie 🍿</div>
+                <div style={{color:"#fff",fontWeight:600}}>Kernel 🍿</div>
                 <div style={S.muted}>❤️ 1 match · 100% swiped</div>
               </div>
             </div>
@@ -1536,7 +1536,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           </div>
         </div>
         <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-          <FlixieBubble message={bellTapped?"Boom! 🔔 That's how you get notified!":current.flixie} subtext={bellTapped?"Now go check those matches!":current.sub}/>
+          <KernelBubble message={bellTapped?"There it is! 🔔 That's how Kernel gets your attention when something exciting happens!":current.kernel} subtext={bellTapped?"Now go check those matches!":current.sub}/>
         </div>
       </div>
     );
@@ -1586,7 +1586,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
         </div>
       )}
       <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-        <FlixieBubble message={watchedIt ? "Look at you go! ✅ That's how it works!" : current.flixie} subtext={watchedIt ? "Both you and your partner see this update instantly." : current.sub}/>
+        <KernelBubble message={watchedIt ? "Look at you, a person who finishes things! ✅" : current.kernel} subtext={watchedIt ? "Your partner sees it too. The watched list is sacred ground." : current.sub}/>
       </div>
     </div></div>
   );
@@ -1595,12 +1595,12 @@ function TutorialScreen({ profile, catalog, onComplete }) {
   return (
     <div style={{...S.page, flexDirection:"column", justifyContent:"flex-start", alignItems:"center", padding:"40px 28px 40px", boxSizing:"border-box", gap:28, overflowY:"auto"}}>
       <div style={S.bigLogo}>DuoFlix</div>
-      <div style={{animation:"flixiePop 0.5s ease"}}>
-        <Flixie size={130} animate={true}/>
+      <div style={{animation:"kernelPop 0.5s ease"}}>
+        <Kernel size={130} animate={true}/>
       </div>
       <div style={{textAlign:"center", width:"100%"}}>
-        <div style={{color:"#fff",fontSize:26,fontWeight:800,marginBottom:12}}>You're ready! 🎉</div>
-        <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.flixie}</div>
+        <div style={{color:"#fff",fontSize:26,fontWeight:800,marginBottom:12}}>Look at you! 🎉</div>
+        <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.kernel}</div>
         <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6,marginTop:8}}>{current.sub}</div>
       </div>
       <button style={{...S.btn,width:"100%",fontSize:16,padding:"14px"}} onClick={onComplete}>
