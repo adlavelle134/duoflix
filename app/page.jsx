@@ -59,7 +59,7 @@ const FALLBACK_CATALOG = [
 // ─── TMDB CATALOG FETCHER ────────────────────────────────────────────────────
 async function tryFetchLiveCatalog(onProgress) {
   try {
-    const test = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&page=1`);
+    const test = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&region=US&page=1`);
     if (!test.ok) return null;
     const testData = await test.json();
     if (!testData.results?.length) return null;
@@ -68,26 +68,26 @@ async function tryFetchLiveCatalog(onProgress) {
 
     for (let p = 1; p <= 50; p++) {
       try {
-        const r = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&page=${p}`);
+        const r = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&region=US&page=${p}`);
         const d = await r.json();
         if (!d.results?.length) break;
         for (const m of (d.results||[])) {
           if (seen.has(`m${m.id}`)) continue;
           seen.add(`m${m.id}`);
-          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W780+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",services:[] });
+          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W780+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",popularity:m.popularity||0,services:[] });
         }
         if (p%5===0) onProgress(Math.round((p/50)*50));
       } catch(e){}
     }
     for (let p = 1; p <= 10; p++) {
       try {
-        const r = await fetch(`${TMDB_BASE}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US&page=${p}`);
+        const r = await fetch(`${TMDB_BASE}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US&region=US&page=${p}`);
         const d = await r.json();
         if (!d.results?.length) break;
         for (const t of (d.results||[])) {
           if (seen.has(`t${t.id}`)) continue;
           seen.add(`t${t.id}`);
-          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W780+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",services:[] });
+          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W780+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",popularity:t.popularity||0,services:[] });
         }
       } catch(e){}
     }
@@ -365,8 +365,11 @@ export default function DuoFlix() {
       onSignOut={handleSignOut}
       onEditProfile={()=>setScreen("setup")}
       onDeleteRooms={async (ids) => {
-        await supabase.from("rooms").delete().in("id", ids);
-        setRooms(prev => prev.filter(r => !ids.includes(r.id)));
+        try {
+          await supabase.from("swipes").delete().in("room_id", ids);
+          await supabase.from("rooms").delete().in("id", ids);
+          setRooms(prev => prev.filter(r => !ids.includes(r.id)));
+        } catch(e) { console.error("Delete rooms error:", e); }
       }}
     />
   );
@@ -646,7 +649,7 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
     if (titles.length<20) titles=[...catalog];
     const room={
       id:`room-${Date.now()}`, partner, sharedServices:shared,
-      queue:shuffle([...titles]),
+      queue:[...titles].sort((a,b)=>(b.popularity||0)-(a.popularity||0)),
       userSwipes:{},
       partnerSwipes:{},
       matches:[],
