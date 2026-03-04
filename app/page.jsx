@@ -325,7 +325,12 @@ export default function DuoFlix() {
   useEffect(() => {
     if (!authUser || screen !== "loadingProfile") return;
     getProfile(authUser.id).then(p => {
-      if (p) { setProfile(p); setScreen("home"); }
+      if (p) {
+        setProfile(p);
+        // Show tutorial if not completed yet
+        if (!p.tutorial_complete) setScreen("tutorial");
+        else setScreen("home");
+      }
       else setScreen("setup");
     });
   }, [authUser, screen]);
@@ -374,7 +379,7 @@ export default function DuoFlix() {
       onComplete={async (name, services) => {
         await upsertProfile(authUser.id, name, services);
         setProfile({ name, services });
-        setScreen("home");
+        setScreen("tutorial");
       }}
     />
   );
@@ -387,6 +392,17 @@ export default function DuoFlix() {
         setScreen("home");
       }}
       onBack={()=>setScreen("home")}
+    />
+  );
+  if (screen === "tutorial") return (
+    <TutorialScreen
+      profile={profile}
+      catalog={catalog}
+      onComplete={async () => {
+        await supabase.from("profiles").update({ tutorial_complete: true }).eq("id", authUser.id);
+        setProfile(p => ({...p, tutorial_complete: true}));
+        setScreen("home");
+      }}
     />
   );
   if (screen === "search") return (
@@ -1071,6 +1087,484 @@ function MatchesScreen({ room, onBack, onToggleWatched }) {
         </div>
       }
     </div></div>
+  );
+}
+
+
+// ─── FLIXIE TUTORIAL ─────────────────────────────────────────────────────────
+
+// Flixie SVG mascot — popcorn bucket with eyes and mouth
+function Flixie({ size = 80, animate = false }) {
+  return (
+    <div style={{
+      width: size, height: size,
+      animation: animate ? "flixieBounce 0.6s ease infinite alternate" : "none",
+      display: "inline-block",
+      filter: "drop-shadow(0 8px 24px rgba(249,115,22,0.4))"
+    }}>
+      <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" width={size} height={size}>
+        {/* Popcorn kernels */}
+        <circle cx="50" cy="13" r="10" fill="#FFF176"/>
+        <circle cx="36" cy="18" r="9" fill="#FFF9C4"/>
+        <circle cx="64" cy="18" r="9" fill="#FFF176"/>
+        <circle cx="26" cy="28" r="8" fill="#FFF9C4"/>
+        <circle cx="74" cy="28" r="8" fill="#FFF176"/>
+        <circle cx="43" cy="10" r="8" fill="#FFF176"/>
+        <circle cx="57" cy="10" r="8" fill="#FFF9C4"/>
+        <circle cx="50" cy="26" r="9" fill="#FFF9C4"/>
+        <circle cx="31" cy="34" r="7" fill="#FFF176"/>
+        <circle cx="69" cy="34" r="7" fill="#FFF9C4"/>
+        <circle cx="20" cy="38" r="6" fill="#FFF176"/>
+        <circle cx="80" cy="38" r="6" fill="#FFF9C4"/>
+        {/* Bucket body */}
+        <path d="M22 44 L28 95 L72 95 L78 44 Z" fill="#ffffff"/>
+        {/* Red stripes */}
+        <path d="M22 44 L28 95 L34 95 L28 44 Z" fill="#E53935"/>
+        <path d="M40 44 L46 95 L52 95 L46 44 Z" fill="#E53935"/>
+        <path d="M58 44 L64 95 L70 95 L64 44 Z" fill="#E53935"/>
+        <path d="M74 44 L72 95 L78 95 L78 44 Z" fill="#E53935"/>
+        {/* Bucket rim */}
+        <rect x="19" y="40" width="62" height="8" rx="4" fill="#E53935"/>
+        {/* Eyes */}
+        <ellipse cx="39" cy="65" rx="7" ry="7" fill="#1a1a2e"/>
+        <ellipse cx="61" cy="65" rx="7" ry="7" fill="#1a1a2e"/>
+        <circle cx="41" cy="63" r="2.5" fill="white"/>
+        <circle cx="63" cy="63" r="2.5" fill="white"/>
+        {/* Smile */}
+        <path d="M38 78 Q50 88 62 78" stroke="#1a1a2e" strokeWidth="3" strokeLinecap="round" fill="none"/>
+        {/* Rosy cheeks */}
+        <circle cx="32" cy="72" r="5" fill="#ffb3ba" opacity="0.6"/>
+        <circle cx="68" cy="72" r="5" fill="#ffb3ba" opacity="0.6"/>
+      </svg>
+      <style>{`
+        @keyframes flixieBounce {
+          from { transform: translateY(0px) rotate(-3deg); }
+          to   { transform: translateY(-8px) rotate(3deg); }
+        }
+        @keyframes flixiePop {
+          0%   { transform: scale(0.5); opacity: 0; }
+          70%  { transform: scale(1.15); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(30px); opacity: 0; }
+          to   { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Speech bubble with Flixie
+function FlixieBubble({ message, subtext, style = {} }) {
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+      animation: "slideUp 0.4s ease", ...style
+    }}>
+      <Flixie size={90} animate={true}/>
+      <div style={{
+        background: "rgba(255,255,255,0.96)", borderRadius: 18, padding: "14px 20px",
+        maxWidth: 280, textAlign: "center", position: "relative",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
+      }}>
+        {/* Speech bubble pointer */}
+        <div style={{
+          position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)",
+          width: 0, height: 0,
+          borderLeft: "10px solid transparent",
+          borderRight: "10px solid transparent",
+          borderBottom: "10px solid rgba(255,255,255,0.96)"
+        }}/>
+        <div style={{ color: "#1a1a2e", fontWeight: 700, fontSize: 15, lineHeight: 1.4 }}>{message}</div>
+        {subtext && <div style={{ color: "#666", fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>{subtext}</div>}
+      </div>
+    </div>
+  );
+}
+
+// Demo movie cards for swipe tutorial
+const DEMO_MOVIES = [
+  { id: "demo1", title: "The Popcorn Chronicles", year: "2024", type: "movie",
+    genres: ["Comedy", "Adventure"], rating: "9.9", services: ["Netflix"],
+    overview: "A sentient bag of popcorn navigates the existential crisis of being delicious.",
+    poster: null, backdrop: null },
+  { id: "demo2", title: "Butter Me Up", year: "2024", type: "movie",
+    genres: ["Romance", "Drama"], rating: "8.5", services: ["Disney+"],
+    overview: "Two kernels fall in love inside a microwave. A tale of heat, pressure, and transformation.",
+    poster: null, backdrop: null },
+];
+
+function TutorialScreen({ profile, catalog, onComplete }) {
+  const [step, setStep]             = useState(0);
+  const [swipeDir, setSwipeDir]     = useState(null);
+  const [matched, setMatched]       = useState(false);
+  const [showMatch, setShowMatch]   = useState(false);
+  const [showNotif, setShowNotif]   = useState(false);
+  const [showWatched, setShowWatched] = useState(false);
+  const [watchedIt, setWatchedIt]   = useState(false);
+  const [dragX, setDragX]           = useState(0);
+  const [dragging, setDragging]     = useState(false);
+  const [exiting, setExiting]       = useState(null);
+  const dragStart = useRef(null);
+  const exitingRef = useRef(false);
+
+  const FLIXIE_USER = {
+    id: "flixie-demo", name: "Flixie 🍿",
+    services: ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+","Peacock","Paramount+"]
+  };
+
+  // Steps: 0=intro, 1=home, 2=find partner, 3=room created, 4=swipe left, 5=swipe right, 6=match, 7=notifications, 8=watched, 9=done
+  const steps = [
+    { flixie: "Hey there, superstar! 🎉 I'm Flixie, your personal popcorn guide!", sub: "I'll walk you through DuoFlix in about 2 minutes. Try not to eat me." },
+    { flixie: "This is your home screen! It's where all your watch rooms live.", sub: "Think of rooms like movie dates — one for each person you watch with. Fancy, right?" },
+    { flixie: "First things first — tap 'Find a Watch Partner' down below!", sub: "Go on, I won't bite. I'm a bag of popcorn." },
+    { flixie: "Ooh look, it's me! 👋 I've been waiting here for AGES.", sub: "Tap 'Invite' next to my name and let's create our room!" },
+    { flixie: "Welcome to your swipe room! Now pay attention — this is important.", sub: "Swipe LEFT on anything you'd rather watch paint dry than sit through." },
+    { flixie: "Now swipe RIGHT on something you actually want to watch!", sub: "Go on, I already liked it. We're basically soulmates now. 🎬" },
+    { flixie: "IT'S A MATCH! 🎉 We both want to watch that!", sub: "See that ❤️ button in the top right? Tap it to see your matches!" },
+    { flixie: "These are your matches! Only shows up when BOTH of you swipe right.", sub: "Tap the 🔔 bell on the home screen — that's where I'll ping you when new matches happen!" },
+    { flixie: "Once you've watched something together, mark it watched!", sub: "Hit 'Mark Watched' so it moves out of your queue. No rewatching unless you really want to." },
+    { flixie: "You're officially a DuoFlix pro! 🍿🎬", sub: "Now go find a real watch partner and start swiping. I'll be here if you need me!" },
+  ];
+
+  const current = steps[step];
+
+  const next = () => setStep(s => Math.min(s + 1, steps.length - 1));
+
+  const handleSwipe = (dir) => {
+    if (exitingRef.current) return;
+    exitingRef.current = true;
+    setExiting(dir);
+    setSwipeDir(dir);
+    if (dir === "like") {
+      setTimeout(() => { setMatched(true); setShowMatch(true); setTimeout(() => setShowMatch(false), 2500); }, 350);
+    }
+    setTimeout(() => { setExiting(null); exitingRef.current = false; next(); }, 350);
+  };
+
+  const onDown = (e) => { dragStart.current = e.touches?.[0]?.clientX ?? e.clientX; setDragging(true); };
+  const onMove = (e) => { if (!dragging || exitingRef.current) return; setDragX((e.touches?.[0]?.clientX ?? e.clientX) - dragStart.current); };
+  const onUp   = () => { if (!dragging) return; setDragging(false); dragStart.current = null; if (Math.abs(dragX) > 80) handleSwipe(dragX > 0 ? "like" : "pass"); else setDragX(0); };
+
+  const rot = dragX * 0.07;
+  const likeOp = Math.max(0, Math.min(dragX / 80, 1));
+  const passOp = Math.max(0, Math.min(-dragX / 80, 1));
+
+  // ── STEP 0: Intro ──
+  if (step === 0) return (
+    <div style={{...S.page, justifyContent:"center", alignItems:"center", gap:24, padding:32}}>
+      <div style={{animation:"flixiePop 0.5s ease"}}>
+        <Flixie size={120} animate={true}/>
+      </div>
+      <div style={{textAlign:"center"}}>
+        <div style={{color:"#fff",fontSize:26,fontWeight:800,marginBottom:8}}>Meet Flixie! 🍿</div>
+        <div style={{color:"rgba(255,255,255,0.6)",fontSize:14,lineHeight:1.6,marginBottom:24}}>{current.flixie}<br/><br/>{current.sub}</div>
+      </div>
+      <button style={{...S.btn, width:"100%"}} onClick={next}>Let's Go! →</button>
+      <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer"}}>Skip tutorial</button>
+    </div>
+  );
+
+  // ── STEP 1: Home screen overview ──
+  if (step === 1) return (
+    <div style={S.page}>
+      <div style={S.shell}>
+        {/* Fake home screen */}
+        <header style={S.hdr}>
+          <div style={S.logo}>DuoFlix</div>
+          <div style={{background:"rgba(255,255,255,0.08)",borderRadius:20,color:"#fff",fontSize:13,fontWeight:600,padding:"6px 14px"}}>
+            {profile?.name?.split(" ")[0] || "You"} ▾
+          </div>
+        </header>
+        <div style={{color:"#fff",fontSize:22,fontWeight:700}}>Hey, {profile?.name?.split(" ")[0] || "there"} 👋</div>
+        <div style={{...S.muted,marginBottom:20}}>Your watch rooms</div>
+        <div style={S.empty}><div style={{fontSize:52}}>🎬</div><p>No rooms yet — find a partner to start swiping!</p></div>
+        <button style={{...S.btn,marginTop:"auto",width:"100%",opacity:0.4}} disabled>+ Find a Watch Partner</button>
+      </div>
+      {/* Flixie overlay */}
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px 32px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:12,background:"linear-gradient(to top, rgba(14,14,26,0.98) 60%, transparent)"}}>
+        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+        <button style={{...S.btn,width:"100%"}} onClick={next}>Got it! →</button>
+      </div>
+    </div>
+  );
+
+  // ── STEP 2: Find partner prompt ──
+  if (step === 2) return (
+    <div style={S.page}>
+      <div style={S.shell}>
+        <header style={S.hdr}>
+          <div style={S.logo}>DuoFlix</div>
+          <div style={{background:"rgba(255,255,255,0.08)",borderRadius:20,color:"#fff",fontSize:13,fontWeight:600,padding:"6px 14px"}}>
+            {profile?.name?.split(" ")[0] || "You"} ▾
+          </div>
+        </header>
+        <div style={{color:"#fff",fontSize:22,fontWeight:700}}>Hey, {profile?.name?.split(" ")[0] || "there"} 👋</div>
+        <div style={{...S.muted,marginBottom:20}}>Your watch rooms</div>
+        <div style={S.empty}><div style={{fontSize:52}}>🎬</div><p>No rooms yet — find a partner to start swiping!</p></div>
+        {/* Pulsing button */}
+        <button style={{...S.btn,marginTop:"auto",width:"100%",animation:"pulse 1.2s ease infinite",boxShadow:"0 0 0 0 rgba(249,115,22,0.7)"}} onClick={next}>+ Find a Watch Partner</button>
+        <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.5)} 50%{box-shadow:0 0 0 12px rgba(249,115,22,0)} }`}</style>
+      </div>
+      <div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+      </div>
+    </div>
+  );
+
+  // ── STEP 3: Find partner screen with Flixie user ──
+  if (step === 3) return (
+    <div style={S.page}>
+      <div style={S.shell}>
+        <header style={S.hdr}>
+          <button style={S.back} onClick={()=>setStep(2)}>←</button>
+          <div style={S.logo}>Find Partner</div>
+          <div style={{width:40}}/>
+        </header>
+        <input style={S.input} placeholder="Search by name..." defaultValue="Flixie" readOnly/>
+        <div style={{marginTop:16}}>
+          <div style={{...S.userCard, border:"1px solid rgba(249,115,22,0.5)", background:"rgba(249,115,22,0.08)"}}>
+            <div style={{width:42,height:42,borderRadius:"50%",background:"linear-gradient(135deg,#f97316,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🍿</div>
+            <div style={{flex:1}}>
+              <div style={{color:"#fff",fontWeight:600}}>Flixie 🍿</div>
+              <div style={S.muted}>Netflix · Disney+ · Max · +5 more</div>
+            </div>
+            <button style={{...S.btnSm, animation:"pulse 1.2s ease infinite"}} onClick={next}>Invite</button>
+          </div>
+        </div>
+      </div>
+      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center"}}>
+        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+      </div>
+    </div>
+  );
+
+  // ── STEP 4: Swipe LEFT tutorial ──
+  if (step === 4) {
+    const movie = DEMO_MOVIES[0];
+    return (
+      <div style={S.page}><div style={S.shell}>
+        <header style={S.hdr}>
+          <div style={{color:"#fff",fontWeight:700,fontSize:14,textAlign:"center"}}>
+            <div>Flixie 🍿</div>
+            <div style={{...S.muted,fontSize:10}}>Netflix · Disney+</div>
+          </div>
+          <button style={S.matchBadge}>❤️ 0</button>
+        </header>
+        <div style={S.progBar}><div style={{...S.progFill,width:"0%"}}/></div>
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",paddingTop:8}}>
+          <div style={{...S.card,
+            transform: exiting ? `translateX(${exiting==="like"?450:-450}px) rotate(${exiting==="like"?25:-25}deg)` : `translateX(${dragX}px) rotate(${rot}deg)`,
+            transition: exiting?"transform 0.32s ease":dragging?"none":"transform 0.2s ease",
+            cursor:"grab"
+          }}
+            onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+            onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+          >
+            <div style={{position:"absolute",inset:0,background:"rgba(14,14,26,1)",borderRadius:20}}/>
+            <div style={{...S.likeStamp,opacity:likeOp}}>WATCH</div>
+            <div style={{...S.nopeStamp,opacity:passOp}}>SKIP</div>
+            <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 20px 18px",gap:9,width:"100%",boxSizing:"border-box"}}>
+              <div style={{width:158,height:237,borderRadius:12,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:60}}>🎬</div>
+              <div style={{color:"#fff",fontSize:17,fontWeight:700,textAlign:"center"}}>{movie.title}</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={S.muted}>{movie.year} · Film</span>
+                <span style={{background:"rgba(249,115,22,0.2)",color:"#f97316",borderRadius:6,padding:"1px 7px",fontSize:11,fontWeight:700}}>⭐ {movie.rating}</span>
+              </div>
+              <p style={{color:"rgba(255,255,255,0.48)",fontSize:11,textAlign:"center",lineHeight:1.55,margin:0}}>{movie.overview}</p>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:40,marginTop:18}}>
+            <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)",animation:"pulse 1.2s ease infinite"}} onClick={()=>handleSwipe("pass")}>✕</button>
+            <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)"}} onClick={()=>handleSwipe("like")}>♥</button>
+          </div>
+        </div>
+        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+          <FlixieBubble message={current.flixie} subtext={current.sub}/>
+        </div>
+      </div></div>
+    );
+  }
+
+  // ── STEP 5: Swipe RIGHT tutorial ──
+  if (step === 5) {
+    const movie = DEMO_MOVIES[1];
+    return (
+      <div style={S.page}><div style={S.shell}>
+        <header style={S.hdr}>
+          <div style={{color:"#fff",fontWeight:700,fontSize:14,textAlign:"center"}}>
+            <div>Flixie 🍿</div>
+            <div style={{...S.muted,fontSize:10}}>Netflix · Disney+</div>
+          </div>
+          <button style={S.matchBadge}>❤️ 0</button>
+        </header>
+        <div style={S.progBar}><div style={{...S.progFill,width:"50%"}}/></div>
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",paddingTop:8}}>
+          <div style={{...S.card,
+            transform: exiting ? `translateX(${exiting==="like"?450:-450}px) rotate(${exiting==="like"?25:-25}deg)` : `translateX(${dragX}px) rotate(${rot}deg)`,
+            transition: exiting?"transform 0.32s ease":dragging?"none":"transform 0.2s ease",
+            cursor:"grab"
+          }}
+            onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+            onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+          >
+            <div style={{position:"absolute",inset:0,background:"rgba(14,14,26,1)",borderRadius:20}}/>
+            <div style={{...S.likeStamp,opacity:likeOp}}>WATCH</div>
+            <div style={{...S.nopeStamp,opacity:passOp}}>SKIP</div>
+            <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 20px 18px",gap:9,width:"100%",boxSizing:"border-box"}}>
+              <div style={{width:158,height:237,borderRadius:12,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:60}}>🍿</div>
+              <div style={{color:"#fff",fontSize:17,fontWeight:700,textAlign:"center"}}>{movie.title}</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={S.muted}>{movie.year} · Film</span>
+                <span style={{background:"rgba(249,115,22,0.2)",color:"#f97316",borderRadius:6,padding:"1px 7px",fontSize:11,fontWeight:700}}>⭐ {movie.rating}</span>
+              </div>
+              <p style={{color:"rgba(255,255,255,0.48)",fontSize:11,textAlign:"center",lineHeight:1.55,margin:0}}>{movie.overview}</p>
+            </div>
+          </div>
+          {/* Match toast */}
+          {showMatch&&(
+            <div style={S.toast}>
+              <div style={{fontSize:40}}>🎉</div>
+              <div style={{fontWeight:800,fontSize:20}}>It's a Match!</div>
+              <div style={{opacity:0.85,fontSize:13,textAlign:"center"}}>Butter Me Up</div>
+            </div>
+          )}
+          <div style={{display:"flex",gap:40,marginTop:18}}>
+            <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)"}} onClick={()=>handleSwipe("pass")}>✕</button>
+            <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)",animation:"pulse 1.2s ease infinite"}} onClick={()=>handleSwipe("like")}>♥</button>
+          </div>
+        </div>
+        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+          <FlixieBubble message={current.flixie} subtext={current.sub}/>
+        </div>
+      </div></div>
+    );
+  }
+
+  // ── STEP 6: Match! Tap the heart ──
+  if (step === 6) return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <div style={{color:"#fff",fontWeight:700,fontSize:14}}>Flixie 🍿</div>
+        <button style={{...S.matchBadge, animation:"pulse 1.2s ease infinite"}} onClick={next}>❤️ 1</button>
+      </header>
+      <div style={S.progBar}><div style={{...S.progFill,width:"100%"}}/></div>
+      <div style={S.empty}>
+        <div style={{fontSize:56}}>🎉</div>
+        <h3 style={{color:"#fff",margin:0}}>All done!</h3>
+        <p style={S.muted}>You've swiped everything in this demo.</p>
+        <button style={S.btn} onClick={next}>See 1 Match →</button>
+      </div>
+      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+      </div>
+    </div></div>
+  );
+
+  // ── STEP 7: Matches screen ──
+  if (step === 7) return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={()=>setStep(6)}>←</button>
+        <div style={S.logo}>Matches ❤️</div>
+        <div style={{width:40}}/>
+      </header>
+      <p style={{...S.muted,marginBottom:12}}>You & Flixie both want to watch:</p>
+      <div style={{overflowY:"auto"}}>
+        <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Up Next (1)</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+          <div style={S.matchCard}>
+            <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🍿</div>
+            <div style={{padding:"8px 8px 10px"}}>
+              <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6}}>Butter Me Up</div>
+              <button onClick={next} style={{width:"100%",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,color:"#22c55e",fontSize:11,fontWeight:600,padding:"5px",cursor:"pointer",animation:"pulse 1.2s ease infinite"}}>
+                ✓ Mark Watched
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+        <FlixieBubble message={current.flixie} subtext={current.sub}/>
+      </div>
+    </div></div>
+  );
+
+  // ── STEP 8: Watched ──
+  if (step === 8) return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back}>←</button>
+        <div style={S.logo}>Matches ❤️</div>
+        <div style={{width:40}}/>
+      </header>
+      <p style={{...S.muted,marginBottom:12}}>You & Flixie both want to watch:</p>
+      {!watchedIt ? (
+        <div style={{overflowY:"auto"}}>
+          <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Up Next (1)</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div style={S.matchCard}>
+              <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🍿</div>
+              <div style={{padding:"8px 8px 10px"}}>
+                <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6}}>Butter Me Up</div>
+                <button onClick={()=>setWatchedIt(true)} style={{width:"100%",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,color:"#22c55e",fontSize:11,fontWeight:600,padding:"5px",cursor:"pointer",animation:"pulse 1.2s ease infinite"}}>
+                  ✓ Mark Watched
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{overflowY:"auto"}}>
+          <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Watched (1)</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div style={{...S.matchCard,opacity:0.5}}>
+              <div style={{position:"relative"}}>
+                <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🍿</div>
+                <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>✅</div>
+              </div>
+              <div style={{padding:"8px 8px 10px"}}>
+                <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6}}>Butter Me Up</div>
+              </div>
+            </div>
+          </div>
+          <div style={{marginTop:20}}>
+            <button style={{...S.btn,width:"100%"}} onClick={next}>Nice! What's next? →</button>
+          </div>
+        </div>
+      )}
+      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+        <FlixieBubble message={watchedIt ? "Look at you go! ✅ That's how it works!" : current.flixie} subtext={watchedIt ? "Both you and your partner see this update instantly." : current.sub}/>
+      </div>
+    </div></div>
+  );
+
+  // ── STEP 9: Done! ──
+  return (
+    <div style={{...S.page,justifyContent:"center",alignItems:"center",gap:20,padding:32}}>
+      <div style={{animation:"flixiePop 0.5s ease"}}>
+        <Flixie size={120} animate={true}/>
+      </div>
+      <div style={{textAlign:"center"}}>
+        <div style={{color:"#fff",fontSize:28,fontWeight:800,marginBottom:8}}>You're ready! 🎉</div>
+        <div style={{color:"rgba(255,255,255,0.6)",fontSize:14,lineHeight:1.7,marginBottom:8}}>{current.flixie}</div>
+        <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6}}>{current.sub}</div>
+      </div>
+      <div style={{width:"100%",background:"rgba(255,255,255,0.05)",borderRadius:14,padding:16,textAlign:"center"}}>
+        <div style={{color:"rgba(255,255,255,0.5)",fontSize:12,lineHeight:1.8}}>
+          👈 Swipe left to skip · 👉 Swipe right to watch<br/>
+          ❤️ See your matches · 🔔 Get notified · ✅ Mark watched
+        </div>
+      </div>
+      <button style={{...S.btn,width:"100%",fontSize:16,padding:"14px"}} onClick={onComplete}>
+        Let's Start Swiping! 🍿
+      </button>
+    </div>
   );
 }
 
