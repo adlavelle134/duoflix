@@ -1214,60 +1214,114 @@ const DEMO_MOVIES = [
 
 // ─── DEMO MOVIE POSTERS ───────────────────────────────────────────────────────
 
-// Poster 1: "The Popcorn Chronicles" — dramatic popcorn adventure
+// Poster 1: "The Popcorn Chronicles" — epic cinematic adventure
 function PosterPopcornChronicles() {
   return (
     <svg width="158" height="237" viewBox="0 0 158 237" xmlns="http://www.w3.org/2000/svg">
-      {/* Sky background */}
       <defs>
-        <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0f0c29"/>
-          <stop offset="100%" stopColor="#302b63"/>
+        <linearGradient id="pc_sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#020010"/>
+          <stop offset="40%" stopColor="#0d0528"/>
+          <stop offset="100%" stopColor="#1a0a3d"/>
         </linearGradient>
-        <linearGradient id="ground1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#24243e"/>
-          <stop offset="100%" stopColor="#0f0c29"/>
+        <linearGradient id="pc_horizon" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.9"/>
+          <stop offset="100%" stopColor="#7c2d12" stopOpacity="0"/>
         </linearGradient>
-        <radialGradient id="glow1" cx="50%" cy="40%" r="40%">
-          <stop offset="0%" stopColor="#f97316" stopOpacity="0.6"/>
+        <linearGradient id="pc_ground" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1c0a00"/>
+          <stop offset="100%" stopColor="#000"/>
+        </linearGradient>
+        <radialGradient id="pc_sun" cx="50%" cy="62%" r="30%">
+          <stop offset="0%" stopColor="#fbbf24" stopOpacity="1"/>
+          <stop offset="40%" stopColor="#f97316" stopOpacity="0.8"/>
           <stop offset="100%" stopColor="#f97316" stopOpacity="0"/>
         </radialGradient>
+        <radialGradient id="pc_glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.4"/>
+          <stop offset="100%" stopColor="#f97316" stopOpacity="0"/>
+        </radialGradient>
+        <filter id="pc_blur">
+          <feGaussianBlur stdDeviation="2"/>
+        </filter>
+        <clipPath id="pc_clip">
+          <rect width="158" height="237" rx="10"/>
+        </clipPath>
       </defs>
-      <rect width="158" height="237" fill="url(#sky1)" rx="10"/>
-      {/* Glow behind hero */}
-      <ellipse cx="79" cy="95" rx="55" ry="55" fill="url(#glow1)"/>
-      {/* Stars */}
-      {[[15,20],[30,12],[55,8],[90,15],[120,10],[140,22],[10,45],[145,40],[25,60],[135,65]].map(([x,y],i)=>(
-        <circle key={i} cx={x} cy={y} r="1.2" fill="white" opacity="0.8"/>
-      ))}
-      {/* Moon */}
-      <circle cx="125" cy="28" r="12" fill="#fef3c7"/>
-      <circle cx="130" cy="24" r="10" fill="#302b63"/>
-      {/* Ground */}
-      <rect x="0" y="175" width="158" height="62" fill="url(#ground1)" rx="0"/>
-      {/* Heroic popcorn bucket */}
-      <path d="M54 120 L60 175 L98 175 L104 120 Z" fill="white"/>
-      <path d="M54 120 L60 175 L65 175 L59 120 Z" fill="#E53935"/>
-      <path d="M68 120 L74 175 L79 175 L73 120 Z" fill="#E53935"/>
-      <path d="M82 120 L88 175 L93 175 L87 120 Z" fill="#E53935"/>
-      <path d="M96 120 L98 175 L104 175 L104 120 Z" fill="#E53935"/>
-      <rect x="51" y="115" width="56" height="9" rx="4" fill="#E53935"/>
-      {/* Popcorn kernels - heroic spread */}
-      <circle cx="79" cy="85" r="14" fill="#FFF176"/>
-      <circle cx="63" cy="95" r="11" fill="#FFF9C4"/>
-      <circle cx="95" cy="95" r="11" fill="#FFF176"/>
-      <circle cx="72" cy="75" r="10" fill="#FFF9C4"/>
-      <circle cx="86" cy="75" r="10" fill="#FFF176"/>
-      <circle cx="55" cy="108" r="9" fill="#FFF9C4"/>
-      <circle cx="103" cy="108" r="9" fill="#FFF176"/>
-      <circle cx="79" cy="68" r="9" fill="#FFF176"/>
-      {/* Cape */}
-      <path d="M68 130 Q50 155 45 175 L60 175 Q62 155 74 138 Z" fill="#E53935" opacity="0.9"/>
-      {/* Title text */}
-      <rect x="0" y="188" width="158" height="49" fill="rgba(0,0,0,0.7)" rx="0"/>
-      <text x="79" y="206" textAnchor="middle" fill="#f97316" fontSize="8" fontWeight="bold" fontFamily="Arial">THE POPCORN</text>
-      <text x="79" y="218" textAnchor="middle" fill="#f97316" fontSize="8" fontWeight="bold" fontFamily="Arial">CHRONICLES</text>
-      <text x="79" y="230" textAnchor="middle" fill="#fef3c7" fontSize="6" fontFamily="Arial">A KERNEL PRODUCTION</text>
+      <g clipPath="url(#pc_clip)">
+        {/* Deep space bg */}
+        <rect width="158" height="237" fill="url(#pc_sky)"/>
+        {/* Stars - many sizes */}
+        {[[8,14,1],[22,8,0.8],[38,19,1.2],[52,6,0.7],[67,22,1],[83,11,0.9],[98,17,1.1],[112,5,0.8],[128,21,1],[143,9,0.7],[5,35,0.6],[18,48,1],[33,41,0.8],[47,55,1.2],[62,38,0.7],[77,50,0.9],[92,43,1],[107,58,0.8],[122,36,1.1],[137,47,0.7],[148,30,0.9],[12,65,0.8],[28,72,1],[43,62,0.7],[58,78,1.1],[73,68,0.9],[88,75,0.8],[103,65,1],[118,73,0.7],[133,68,1.2]].map(([x,y,r],i)=>(
+          <circle key={i} cx={x} cy={y} r={r} fill="white" opacity={0.5+Math.random()*0.5}/>
+        ))}
+        {/* Nebula wisps */}
+        <ellipse cx="30" cy="40" rx="25" ry="12" fill="#7c3aed" opacity="0.08"/>
+        <ellipse cx="120" cy="55" rx="22" ry="10" fill="#2563eb" opacity="0.07"/>
+        {/* Horizon glow */}
+        <rect x="0" y="118" width="158" height="50" fill="url(#pc_horizon)"/>
+        <ellipse cx="79" cy="138" rx="70" ry="25" fill="url(#pc_sun)"/>
+        {/* Distant mountains silhouette */}
+        <path d="M0 148 L15 118 L28 133 L45 105 L62 128 L79 98 L96 122 L113 108 L130 128 L145 112 L158 130 L158 148 Z" fill="#0d0020"/>
+        <path d="M0 155 L20 135 L38 148 L55 138 L72 150 L89 140 L106 153 L123 142 L140 152 L158 144 L158 155 Z" fill="#120030" opacity="0.9"/>
+        {/* Ground */}
+        <rect x="0" y="155" width="158" height="82" fill="url(#pc_ground)"/>
+        {/* Ground texture lines */}
+        <line x1="0" y1="162" x2="158" y2="162" stroke="#f97316" strokeOpacity="0.08" strokeWidth="0.5"/>
+        <line x1="0" y1="170" x2="158" y2="170" stroke="#f97316" strokeOpacity="0.05" strokeWidth="0.5"/>
+        {/* Hero glow on ground */}
+        <ellipse cx="79" cy="158" rx="35" ry="6" fill="#f97316" opacity="0.3" filter="url(#pc_blur)"/>
+        {/* Hero popcorn bucket - large, centered */}
+        {/* Cape flowing behind */}
+        <path d="M65 118 Q42 138 38 162 Q50 158 62 162 Q66 145 72 132 Z" fill="#dc2626"/>
+        <path d="M65 118 Q43 140 40 162 Q52 160 63 162 Q67 146 73 133 Z" fill="#ef4444" opacity="0.6"/>
+        {/* Bucket body */}
+        <path d="M57 118 L63 162 L95 162 L101 118 Z" fill="white"/>
+        {/* Bucket shading */}
+        <path d="M57 118 L63 162 L67 162 L61 118 Z" fill="#fee2e2"/>
+        <path d="M71 118 L77 162 L81 162 L75 118 Z" fill="#fee2e2"/>
+        <path d="M85 118 L91 162 L95 162 L89 118 Z" fill="#fee2e2"/>
+        {/* Red stripes */}
+        <path d="M57 118 L63 162 L66 162 L60 118 Z" fill="#dc2626"/>
+        <path d="M69 118 L75 162 L78 162 L72 118 Z" fill="#dc2626"/>
+        <path d="M82 118 L88 162 L91 162 L85 118 Z" fill="#dc2626"/>
+        <path d="M95 118 L95 162 L101 162 L101 118 Z" fill="#dc2626"/>
+        {/* Rim */}
+        <rect x="54" y="112" width="51" height="8" rx="3" fill="#dc2626"/>
+        <rect x="55" y="112" width="49" height="4" rx="2" fill="#ef4444"/>
+        {/* Popcorn kernels - big dramatic spread */}
+        <circle cx="79" cy="78" r="16" fill="#fef08a"/>
+        <circle cx="79" cy="78" r="14" fill="#fef9c3"/>
+        <circle cx="60" cy="90" r="13" fill="#fef08a"/>
+        <circle cx="98" cy="90" r="13" fill="#fef9c3"/>
+        <circle cx="69" cy="68" r="12" fill="#fef9c3"/>
+        <circle cx="89" cy="68" r="12" fill="#fef08a"/>
+        <circle cx="50" cy="104" r="10" fill="#fef08a"/>
+        <circle cx="108" cy="104" r="10" fill="#fef9c3"/>
+        <circle cx="79" cy="60" r="11" fill="#fef08a"/>
+        <circle cx="44" cy="118" r="8" fill="#fef9c3"/>
+        <circle cx="114" cy="118" r="8" fill="#fef08a"/>
+        {/* Kernel shine dots */}
+        <circle cx="76" cy="74" r="3" fill="white" opacity="0.5"/>
+        <circle cx="57" cy="86" r="2.5" fill="white" opacity="0.4"/>
+        <circle cx="95" cy="86" r="2.5" fill="white" opacity="0.4"/>
+        {/* Epic lens flare */}
+        <line x1="79" y1="40" x2="79" y2="200" stroke="white" strokeWidth="0.5" opacity="0.04"/>
+        <line x1="0" y1="118" x2="158" y2="118" stroke="white" strokeWidth="0.5" opacity="0.04"/>
+        <circle cx="79" cy="118" r="3" fill="white" opacity="0.3"/>
+        <circle cx="79" cy="118" r="8" fill="white" opacity="0.08"/>
+        <circle cx="79" cy="118" r="18" fill="white" opacity="0.04"/>
+        {/* Title block */}
+        <rect x="0" y="174" width="158" height="63" fill="rgba(0,0,0,0.85)"/>
+        <rect x="0" y="174" width="158" height="2" fill="#f97316"/>
+        {/* Rating bar */}
+        <rect x="12" y="180" width="134" height="1" fill="rgba(249,115,22,0.3)"/>
+        <text x="79" y="197" textAnchor="middle" fill="#fbbf24" fontSize="10.5" fontWeight="bold" fontFamily="Arial" letterSpacing="2">THE POPCORN</text>
+        <text x="79" y="211" textAnchor="middle" fill="white" fontSize="9.5" fontWeight="bold" fontFamily="Arial" letterSpacing="3">CHRONICLES</text>
+        <rect x="30" y="215" width="98" height="0.7" fill="rgba(255,255,255,0.2)"/>
+        <text x="79" y="224" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="5" fontFamily="Arial" letterSpacing="2">A KERNEL PRODUCTION  ·  2024</text>
+        <text x="79" y="233" textAnchor="middle" fill="rgba(249,115,22,0.7)" fontSize="5" fontFamily="Arial">"THE MOST BUTTERY EPIC OF OUR TIME"</text>
+      </g>
     </svg>
   );
 }
