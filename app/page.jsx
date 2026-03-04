@@ -364,6 +364,10 @@ export default function DuoFlix() {
   }}
       onSignOut={handleSignOut}
       onEditProfile={()=>setScreen("setup")}
+      onDeleteRooms={async (ids) => {
+        await supabase.from("rooms").delete().in("id", ids);
+        setRooms(prev => prev.filter(r => !ids.includes(r.id)));
+      }}
     />
   );
 }
