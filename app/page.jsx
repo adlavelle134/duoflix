@@ -394,6 +394,14 @@ export default function DuoFlix() {
       onBack={()=>setScreen("home")}
     />
   );
+  if (screen === "stats") return (
+    <StatsScreen
+      authUser={authUser}
+      profile={profile}
+      rooms={rooms}
+      onBack={()=>setScreen("home")}
+    />
+  );
   if (screen === "tutorial") return (
     <TutorialScreen
       profile={profile}
@@ -459,6 +467,7 @@ export default function DuoFlix() {
       onSignOut={handleSignOut}
       onEditProfile={()=>setScreen("setup")}
       onRestartTutorial={()=>setScreen("tutorial")}
+      onViewStats={()=>setScreen("stats")}
       onDeleteRooms={async (ids) => {
         try {
           await supabase.from("swipes").delete().in("room_id", ids);
@@ -588,7 +597,7 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
 }
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
-function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms, onRestartTutorial }) {
+function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms, onRestartTutorial, onViewStats }) {
   const [showMenu, setShowMenu]   = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [editMode, setEditMode]   = useState(false);
@@ -653,6 +662,7 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
             {showMenu&&(
               <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
                 <button style={S.menuItem} onClick={()=>{onEditProfile();setShowMenu(false);}}>✏️ Edit Profile</button>
+                <button style={S.menuItem} onClick={()=>{onViewStats();setShowMenu(false);}}>📊 My Stats</button>
                 <button style={S.menuItem} onClick={()=>{onRestartTutorial();setShowMenu(false);}}>🍿 Tutorial</button>
                 <button style={{...S.menuItem,color:"#ef4444"}} onClick={onSignOut}>🚪 Sign Out</button>
               </div>
@@ -1597,6 +1607,185 @@ function TutorialScreen({ profile, catalog, onComplete }) {
         Let's Start Swiping! 🍿
       </button>
     </div>
+  );
+}
+
+
+// ─── STATS SCREEN ────────────────────────────────────────────────────────────
+function StatsScreen({ authUser, profile, rooms, onBack }) {
+  const [swipeStats, setSwipeStats] = useState(null);
+  const [loading, setLoading]       = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      // Load all swipes for this user across all rooms
+      const { data: swipes } = await supabase
+        .from("swipes")
+        .select("*")
+        .eq("user_id", authUser.id);
+
+      const allSwipes = swipes || [];
+      const likes     = allSwipes.filter(s => s.direction === "like");
+      const passes    = allSwipes.filter(s => s.direction === "pass");
+
+      // Total watched across all rooms
+      const totalWatched = rooms.reduce((sum, r) => sum + (r.watchedIds||[]).length, 0);
+
+      // Total matches across all rooms
+      const totalMatches = rooms.reduce((sum, r) => sum + (r.matches||[]).length, 0);
+
+      // Most active partner — room with most matches
+      const partnerMatchMap = {};
+      rooms.forEach(r => {
+        const name = r.partner?.name || "Unknown";
+        partnerMatchMap[name] = (partnerMatchMap[name] || 0) + (r.matches||[]).length;
+      });
+      const mostActivePartner = Object.entries(partnerMatchMap)
+        .sort((a,b) => b[1] - a[1])[0] || null;
+
+      // Genre stats — look up liked/passed title IDs against room queues
+      const titleMap = {};
+      rooms.forEach(r => (r.queue||[]).forEach(t => { titleMap[t.id] = t; }));
+
+      const genreLikes  = {};
+      const genrePasses = {};
+      likes.forEach(s => {
+        const t = titleMap[s.title_id];
+        (t?.genres||[]).forEach(g => { genreLikes[g]  = (genreLikes[g]  || 0) + 1; });
+      });
+      passes.forEach(s => {
+        const t = titleMap[s.title_id];
+        (t?.genres||[]).forEach(g => { genrePasses[g] = (genrePasses[g] || 0) + 1; });
+      });
+
+      const topLikedGenres  = Object.entries(genreLikes).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const topSkippedGenres = Object.entries(genrePasses).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+      const likeRatio = allSwipes.length > 0
+        ? Math.round((likes.length / allSwipes.length) * 100)
+        : 0;
+
+      setSwipeStats({
+        totalSwipes: allSwipes.length,
+        totalLikes: likes.length,
+        totalPasses: passes.length,
+        likeRatio,
+        totalMatches,
+        totalWatched,
+        mostActivePartner,
+        topLikedGenres,
+        topSkippedGenres,
+      });
+      setLoading(false);
+    }
+    loadStats();
+  }, []);
+
+  const StatCard = ({ emoji, label, value, sub, color="#f97316" }) => (
+    <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
+      <div style={{fontSize:32,flexShrink:0}}>{emoji}</div>
+      <div style={{flex:1}}>
+        <div style={{color:"rgba(255,255,255,0.5)",fontSize:11,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{label}</div>
+        <div style={{color,fontSize:22,fontWeight:800,lineHeight:1}}>{value}</div>
+        {sub&&<div style={{color:"rgba(255,255,255,0.35)",fontSize:11,marginTop:3}}>{sub}</div>}
+      </div>
+    </div>
+  );
+
+  const GenreBar = ({ genre, count, max, color }) => (
+    <div style={{marginBottom:10}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+        <span style={{color:"#fff",fontSize:13}}>{genre}</span>
+        <span style={{color:"rgba(255,255,255,0.4)",fontSize:12}}>{count} swipes</span>
+      </div>
+      <div style={{height:6,background:"rgba(255,255,255,0.07)",borderRadius:3}}>
+        <div style={{height:"100%",width:`${Math.round((count/max)*100)}%`,background:color,borderRadius:3,transition:"width 0.6s ease"}}/>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={onBack}>←</button>
+        <div style={S.logo}>My Stats</div>
+        <div style={{width:40}}/>
+      </header>
+
+      {loading ? (
+        <div style={S.empty}>
+          <div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading your stats...</div>
+        </div>
+      ) : swipeStats?.totalSwipes === 0 ? (
+        <div style={S.empty}>
+          <div style={{fontSize:48}}>🍿</div>
+          <p>No stats yet — start swiping to see your data here!</p>
+        </div>
+      ) : (
+        <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingBottom:20}}>
+
+          {/* Overview cards */}
+          <div style={{color:"rgba(255,255,255,0.4)",fontSize:11,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Overview</div>
+          <StatCard emoji="👆" label="Total Swipes" value={swipeStats.totalSwipes.toLocaleString()} sub="across all rooms"/>
+          <StatCard emoji="❤️" label="Total Matches" value={swipeStats.totalMatches.toLocaleString()} sub="titles you both liked" color="#ec4899"/>
+          <StatCard emoji="✅" label="Titles Watched" value={swipeStats.totalWatched.toLocaleString()} sub="marked as watched" color="#22c55e"/>
+
+          {/* Most active partner */}
+          {swipeStats.mostActivePartner && (
+            <StatCard
+              emoji="🤝"
+              label="Most Active Partner"
+              value={swipeStats.mostActivePartner[0]}
+              sub={`${swipeStats.mostActivePartner[1]} matches together`}
+              color="#a78bfa"
+            />
+          )}
+
+          {/* Like vs pass ratio */}
+          <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"16px 18px"}}>
+            <div style={{color:"rgba(255,255,255,0.5)",fontSize:11,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Are You Picky? 🤔</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <span style={{color:"#22c55e",fontSize:22,fontWeight:800}}>{swipeStats.likeRatio}%</span>
+              <span style={{color:"rgba(255,255,255,0.4)",fontSize:13}}>like rate</span>
+              <span style={{marginLeft:"auto",color:"rgba(255,255,255,0.3)",fontSize:12}}>
+                {swipeStats.likeRatio >= 70 ? "Easy to please 😄" :
+                 swipeStats.likeRatio >= 40 ? "Balanced taste 🎯" :
+                 "Very selective 🧐"}
+              </span>
+            </div>
+            {/* Like/pass bar */}
+            <div style={{height:10,background:"rgba(239,68,68,0.3)",borderRadius:5,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${swipeStats.likeRatio}%`,background:"linear-gradient(90deg,#22c55e,#16a34a)",borderRadius:5,transition:"width 0.6s ease"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
+              <span style={{color:"#22c55e",fontSize:11}}>👍 {swipeStats.totalLikes} likes</span>
+              <span style={{color:"#ef4444",fontSize:11}}>{swipeStats.totalPasses} passes 👎</span>
+            </div>
+          </div>
+
+          {/* Top liked genres */}
+          {swipeStats.topLikedGenres.length > 0 && (
+            <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"16px 18px"}}>
+              <div style={{color:"rgba(255,255,255,0.5)",fontSize:11,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Most Liked Genres ❤️</div>
+              {swipeStats.topLikedGenres.map(([g,n]) => (
+                <GenreBar key={g} genre={g} count={n} max={swipeStats.topLikedGenres[0][1]} color="linear-gradient(90deg,#f97316,#ec4899)"/>
+              ))}
+            </div>
+          )}
+
+          {/* Top skipped genres */}
+          {swipeStats.topSkippedGenres.length > 0 && (
+            <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"16px 18px"}}>
+              <div style={{color:"rgba(255,255,255,0.5)",fontSize:11,textTransform:"uppercase",letterSpacing:1,marginBottom:12}}>Most Skipped Genres 👎</div>
+              {swipeStats.topSkippedGenres.map(([g,n]) => (
+                <GenreBar key={g} genre={g} count={n} max={swipeStats.topSkippedGenres[0][1]} color="rgba(239,68,68,0.7)"/>
+              ))}
+            </div>
+          )}
+
+        </div>
+      )}
+    </div></div>
   );
 }
 
