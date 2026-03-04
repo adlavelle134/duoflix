@@ -92,19 +92,40 @@ async function tryFetchLiveCatalog(onProgress) {
       } catch(e){}
     }
 
+    // Fetch providers for ALL titles in batches of 40 with a small delay
+    // to stay within TMDB's rate limit of ~40 requests/second
     onProgress(65);
-    await Promise.all(all.slice(0,200).map(async (t) => {
-      try {
-        const ep = t.type==="movie" ? `${TMDB_BASE}/movie/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}` : `${TMDB_BASE}/tv/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`;
-        const r = await fetch(ep);
-        const d = await r.json();
-        t.services = (d.results?.US?.flatrate||[]).map(p=>PROVIDER_MAP[p.provider_id]).filter(Boolean).filter(s=>ALL_SERVICES.includes(s));
-      } catch(e){}
-    }));
+    const BATCH_SIZE = 40;
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
+    for (let i = 0; i < all.length; i += BATCH_SIZE) {
+      const batch = all.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (t) => {
+        try {
+          const ep = t.type==="movie"
+            ? `${TMDB_BASE}/movie/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`
+            : `${TMDB_BASE}/tv/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`;
+          const r = await fetch(ep);
+          if (!r.ok) return;
+          const d = await r.json();
+          t.services = (d.results?.US?.flatrate||[])
+            .map(p=>PROVIDER_MAP[p.provider_id])
+            .filter(Boolean)
+            .filter(s=>ALL_SERVICES.includes(s));
+        } catch(e){}
+      }));
+      // Small delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < all.length) await delay(250);
+      // Update progress from 65% to 95% as providers load
+      onProgress(Math.min(95, 65 + Math.round(((i + BATCH_SIZE) / all.length) * 30)));
+    }
+
+    // Only use fallback service for titles that truly have no provider data
     const cycle = ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+"];
     let ci = 0;
-    for (const t of all) { if (!t.services.length) { t.services=[cycle[ci%cycle.length]]; ci++; } }
+    for (const t of all) {
+      if (!t.services.length) { t.services=[cycle[ci%cycle.length]]; ci++; }
+    }
 
     onProgress(100);
     return all;
