@@ -458,6 +458,7 @@ export default function DuoFlix() {
   }}
       onSignOut={handleSignOut}
       onEditProfile={()=>setScreen("setup")}
+      onRestartTutorial={()=>setScreen("tutorial")}
       onDeleteRooms={async (ids) => {
         try {
           await supabase.from("swipes").delete().in("room_id", ids);
@@ -587,7 +588,7 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
 }
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
-function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms }) {
+function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms, onRestartTutorial }) {
   const [showMenu, setShowMenu]   = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [editMode, setEditMode]   = useState(false);
@@ -1236,15 +1237,22 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 
   const next = () => setStep(s => Math.min(s + 1, steps.length - 1));
 
+  const [wrongSwipe, setWrongSwipe] = useState(false);
+
   const handleSwipe = (dir) => {
     if (exitingRef.current) return;
+    // Step 4: must swipe pass (left)
+    if (step === 4 && dir === "like") { setWrongSwipe(true); setDragX(0); return; }
+    // Step 5: must swipe like (right)
+    if (step === 5 && dir === "pass") { setWrongSwipe(true); setDragX(0); return; }
+    setWrongSwipe(false);
     exitingRef.current = true;
     setExiting(dir);
     setSwipeDir(dir);
     if (dir === "like") {
       setTimeout(() => { setMatched(true); setShowMatch(true); setTimeout(() => setShowMatch(false), 2500); }, 350);
     }
-    setTimeout(() => { setExiting(null); exitingRef.current = false; next(); }, 350);
+    setTimeout(() => { setExiting(null); setDragX(0); exitingRef.current = false; next(); }, 350);
   };
 
   const onDown = (e) => { dragStart.current = e.touches?.[0]?.clientX ?? e.clientX; setDragging(true); };
@@ -1381,11 +1389,12 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           </div>
           <div style={{display:"flex",gap:40,marginTop:18}}>
             <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)",animation:"pulse 1.2s ease infinite"}} onClick={()=>handleSwipe("pass")}>✕</button>
-            <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)"}} onClick={()=>handleSwipe("like")}>♥</button>
+            <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)",opacity:0.3,cursor:"not-allowed"}} onClick={()=>setWrongSwipe(true)}>♥</button>
           </div>
+          {wrongSwipe&&<div style={{color:"#f97316",fontSize:12,textAlign:"center",marginTop:8,animation:"slideUp 0.3s ease"}}>👈 Nope! Flixie says swipe LEFT on this one!</div>}
         </div>
         <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-          <FlixieBubble message={current.flixie} subtext={current.sub}/>
+          <FlixieBubble message={wrongSwipe?"Psst! The ✕ button! LEFT! Do I need to draw you a map? 🗺️":current.flixie} subtext={wrongSwipe?"Swipe left = skip. Got it? Good.":current.sub}/>
         </div>
       </div></div>
     );
@@ -1435,12 +1444,13 @@ function TutorialScreen({ profile, catalog, onComplete }) {
             </div>
           )}
           <div style={{display:"flex",gap:40,marginTop:18}}>
-            <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)"}} onClick={()=>handleSwipe("pass")}>✕</button>
+            <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)",opacity:0.3,cursor:"not-allowed"}} onClick={()=>setWrongSwipe(true)}>✕</button>
             <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)",animation:"pulse 1.2s ease infinite"}} onClick={()=>handleSwipe("like")}>♥</button>
           </div>
+          {wrongSwipe&&<div style={{color:"#f97316",fontSize:12,textAlign:"center",marginTop:8,animation:"slideUp 0.3s ease"}}>👉 Other way! Flixie believes in you. Mostly.</div>}
         </div>
         <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-          <FlixieBubble message={current.flixie} subtext={current.sub}/>
+          <FlixieBubble message={wrongSwipe?"Really?! The ♥ button! RIGHT! We just went over this! 🤦":current.flixie} subtext={wrongSwipe?"Swipe right = want to watch. You've got this!":current.sub}/>
         </div>
       </div></div>
     );
@@ -1466,34 +1476,57 @@ function TutorialScreen({ profile, catalog, onComplete }) {
     </div></div>
   );
 
-  // ── STEP 7: Matches screen ──
-  if (step === 7) return (
-    <div style={S.page}><div style={S.shell}>
-      <header style={S.hdr}>
-        <button style={S.back} onClick={()=>setStep(6)}>←</button>
-        <div style={S.logo}>Matches ❤️</div>
-        <div style={{width:40}}/>
-      </header>
-      <p style={{...S.muted,marginBottom:12}}>You & Flixie both want to watch:</p>
-      <div style={{overflowY:"auto"}}>
-        <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Up Next (1)</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-          <div style={S.matchCard}>
-            <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🍿</div>
-            <div style={{padding:"8px 8px 10px"}}>
-              <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6}}>Butter Me Up</div>
-              <button onClick={next} style={{width:"100%",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,color:"#22c55e",fontSize:11,fontWeight:600,padding:"5px",cursor:"pointer",animation:"pulse 1.2s ease infinite"}}>
-                ✓ Mark Watched
-              </button>
+  // ── STEP 7: Notifications — fake home screen with bell ──
+  if (step === 7) {
+    const [bellTapped, setBellTapped] = useState(false);
+    return (
+      <div style={S.page}>
+        <div style={S.shell}>
+          <header style={S.hdr}>
+            <div style={S.logo}>DuoFlix</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {/* Pulsing bell with notification badge */}
+              <div style={{position:"relative"}}>
+                <button
+                  onClick={()=>{ setBellTapped(true); setTimeout(next, 1200); }}
+                  style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.8)",fontSize:16,padding:"6px 10px",cursor:"pointer",animation:bellTapped?"none":"pulse 1.2s ease infinite"}}>
+                  🔔
+                  {!bellTapped&&<span style={{position:"absolute",top:-4,right:-4,background:"#ef4444",borderRadius:"50%",width:16,height:16,fontSize:10,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>1</span>}
+                </button>
+                {bellTapped&&(
+                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,zIndex:50,minWidth:240,overflow:"hidden",animation:"slideUp 0.3s ease"}}>
+                    <div style={{padding:"12px 16px 8px",color:"#fff",fontWeight:700,fontSize:13,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>Notifications</div>
+                    <div style={{padding:"10px 16px"}}>
+                      <div style={{color:"#fff",fontSize:13}}>🎉 You matched on "Butter Me Up"!</div>
+                      <div style={{color:"rgba(255,255,255,0.3)",fontSize:11,marginTop:2}}>Just now</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={{background:"rgba(255,255,255,0.08)",borderRadius:20,color:"#fff",fontSize:13,fontWeight:600,padding:"6px 14px"}}>
+                {profile?.name?.split(" ")[0]||"You"} ▾
+              </div>
             </div>
+          </header>
+          <div style={{color:"#fff",fontSize:22,fontWeight:700}}>Hey, {profile?.name?.split(" ")[0]||"there"} 👋</div>
+          <div style={{...S.muted,marginBottom:20}}>Your watch rooms</div>
+          <div style={{...S.roomCard}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:40,height:56,background:"rgba(255,255,255,0.07)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🍿</div>
+              <div>
+                <div style={{color:"#fff",fontWeight:600}}>Flixie 🍿</div>
+                <div style={S.muted}>❤️ 1 match · 100% swiped</div>
+              </div>
+            </div>
+            <div style={{color:"rgba(255,255,255,0.25)",fontSize:20}}>→</div>
           </div>
         </div>
+        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+          <FlixieBubble message={bellTapped?"Boom! 🔔 That's how you get notified!":current.flixie} subtext={bellTapped?"Now go check those matches!":current.sub}/>
+        </div>
       </div>
-      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-        <FlixieBubble message={current.flixie} subtext={current.sub}/>
-      </div>
-    </div></div>
-  );
+    );
+  }
 
   // ── STEP 8: Watched ──
   if (step === 8) return (
