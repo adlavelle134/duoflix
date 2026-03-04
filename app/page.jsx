@@ -388,7 +388,7 @@ export default function DuoFlix() {
 function Spinner() {
   return (
     <div style={{...S.page,flexDirection:"column",gap:16}}>
-      <div style={S.bigLogo}>DuoFlix</div>
+      <div style={S.bigLogo}>🍿 DuoFlix</div>
       <div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading...</div>
     </div>
   );
@@ -420,11 +420,8 @@ function AuthScreen({ onAuth }) {
 
   return (
     <div style={S.page}><div style={S.onWrap}>
-      <div style={S.bigLogo}>DuoFlix</div>
-      <div style={{color:"#fff",fontSize:17,fontWeight:600,marginBottom:4}}>
-        {mode==="signin" ? "Welcome back 👋" : "Create your account"}
-      </div>
-      <p style={{...S.muted,marginBottom:24}}>{mode==="signin" ? "Sign in to your account" : "Start swiping with your partner"}</p>
+      <div style={S.bigLogo}>🍿 DuoFlix</div>
+      <p style={{color:"rgba(255,255,255,0.5)",fontSize:13,textAlign:"center",marginBottom:28,marginTop:0,fontStyle:"italic",lineHeight:1.6}}>Swipe together. Match together. Watch together.</p>
 
       <input style={{...S.input,marginBottom:10}} type="email" placeholder="Email address"
         value={email} onChange={e=>setEmail(e.target.value)} />
@@ -460,7 +457,7 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
   return (
     <div style={S.page}><div style={S.onWrap}>
       {step===0&&<>
-        <div style={S.bigLogo}>DuoFlix</div>
+        <div style={S.bigLogo}>🍿 DuoFlix</div>
         <div style={{color:"#fff",fontSize:16,fontWeight:600,marginBottom:4}}>Welcome! Let's set up your profile</div>
         <p style={{...S.muted,marginBottom:20}}>{email}</p>
         <div style={{width:"100%",marginBottom:8}}>
@@ -529,7 +526,7 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
   return (
     <div style={S.page}><div style={S.shell}>
       <header style={S.hdr}>
-        <div style={S.logo}>DuoFlix</div>
+        <div style={S.logo}>🍿 DuoFlix</div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {rooms.length>0&&!editMode&&(
             <button onClick={()=>setEditMode(true)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.6)",fontSize:13,padding:"6px 12px",cursor:"pointer"}}>
@@ -543,7 +540,7 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
           )}
           <div style={{position:"relative"}}>
             <button onClick={()=>setShowMenu(p=>!p)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:20,color:"#fff",fontSize:13,fontWeight:600,padding:"6px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-              😊 {profile?.name?.split(" ")[0]} ▾
+              {profile?.name?.split(" ")[0]} ▾
             </button>
             {showMenu&&(
               <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
@@ -588,7 +585,7 @@ function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditPro
                   :<div style={{width:40,height:56,background:"rgba(255,255,255,0.07)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
                 }
                 <div>
-                  <div style={{color:"#fff",fontWeight:600}}>{r.partner.avatar||"😊"} {r.partner.name}</div>
+                  <div style={{color:"#fff",fontWeight:600}}>{r.partner.name}</div>
                   <div style={S.muted}>❤️ {r.matches?.length||0} matches · {pct}% swiped</div>
                   <div style={{marginTop:4,height:2,width:110,background:"rgba(255,255,255,0.08)",borderRadius:2}}>
                     <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#f97316,#ec4899)",borderRadius:2}}/>
@@ -800,7 +797,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
       <header style={S.hdr}>
         <button style={S.back} onClick={onBack}>←</button>
         <div style={{color:"#fff",fontWeight:700,fontSize:14,textAlign:"center"}}>
-          <div>{room.partner.avatar||"😊"} {room.partner.name}</div>
+          <div>{room.partner.name}</div>
           <div style={{...S.muted,fontSize:10}}>{room.sharedServices.join(" · ")||"All services"}</div>
         </div>
         <div style={{display:"flex",gap:6}}>
