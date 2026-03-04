@@ -703,6 +703,8 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
 }
 
 // ─── SWIPE SCREEN ─────────────────────────────────────────────────────────────
+const ALL_GENRES = ["Action","Adventure","Animation","Comedy","Crime","Documentary","Drama","Family","Fantasy","History","Horror","Music","Mystery","Romance","Sci-Fi","Thriller","War","Western","Sci-Fi & Fantasy","Action & Adventure","Kids","Reality"];
+
 function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const startIdx = Object.keys(room.userSwipes||{}).length;
   const [idx, setIdx]           = useState(startIdx);
@@ -711,16 +713,35 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const [dragX, setDragX]       = useState(0);
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting]   = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [contentType, setContentType] = useState("both"); // both | movie | tv
+  const [selectedGenres, setSelectedGenres] = useState([]);
   const dragStart = useRef(null);
   const exitingRef = useRef(false);
 
-  const queue   = room.queue||[];
-  const current = queue[idx];
-  const done    = idx>=queue.length;
-  const matches = queue.filter((t)=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
+  const toggleGenre = (g) => setSelectedGenres(prev =>
+    prev.includes(g) ? prev.filter(x=>x!==g) : [...prev, g]
+  );
+
+  const fullQueue = room.queue||[];
+
+  // Apply filters to queue
+  const queue = fullQueue.filter(t => {
+    if (contentType==="movie" && t.type!=="movie") return false;
+    if (contentType==="tv" && t.type!=="tv") return false;
+    if (selectedGenres.length>0 && !t.genres.some(g=>selectedGenres.includes(g))) return false;
+    return true;
+  });
+
+  // Find current card index within filtered queue
+  const filteredIdx = Math.max(0, queue.findIndex(t=>!swipes[t.id]));
+  const current = queue[filteredIdx];
+  const done    = !current;
+  const matches = fullQueue.filter((t)=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
+  const unswiped = queue.filter(t=>!swipes[t.id]).length;
 
   const swipe = (dir) => {
-    if (!current||exitingRef.current) return;
+    if (!current||exitingRef.current||done) return;
     exitingRef.current=true;
     setExiting(dir);
     const ns={...swipes,[current.id]:dir};
@@ -751,19 +772,63 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
       <header style={S.hdr}>
         <button style={S.back} onClick={onBack}>←</button>
         <div style={{color:"#fff",fontWeight:700,fontSize:14,textAlign:"center"}}>
-          <div>{room.partner.avatar} {room.partner.name}</div>
+          <div>{room.partner.avatar||"😊"} {room.partner.name}</div>
           <div style={{...S.muted,fontSize:10}}>{room.sharedServices.join(" · ")||"All services"}</div>
         </div>
-        <button style={S.matchBadge} onClick={onViewMatches}>❤️ {matches.length}</button>
+        <div style={{display:"flex",gap:6}}>
+          <button style={{...S.matchBadge,background:"rgba(255,255,255,0.08)",borderColor:"rgba(255,255,255,0.15)",color:"#fff"}} onClick={()=>setShowFilters(p=>!p)}>⚙️</button>
+          <button style={S.matchBadge} onClick={onViewMatches}>❤️ {matches.length}</button>
+        </div>
       </header>
 
-      <div style={S.progBar}><div style={{...S.progFill,width:`${(idx/Math.max(queue.length,1))*100}%`}}/></div>
+      {/* Filter Panel */}
+      {showFilters&&(
+        <div style={{background:"rgba(20,20,32,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"16px",marginBottom:12}}>
+          <div style={{color:"#fff",fontWeight:700,fontSize:14,marginBottom:12}}>Filter Titles</div>
+
+          {/* Content type */}
+          <div style={{marginBottom:12}}>
+            <div style={{...S.muted,fontSize:11,marginBottom:6}}>CONTENT TYPE</div>
+            <div style={{display:"flex",gap:6}}>
+              {[["both","🎬 Both"],["movie","🎥 Movies"],["tv","📺 TV Shows"]].map(([val,label])=>(
+                <button key={val} onClick={()=>setContentType(val)}
+                  style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${contentType===val?"#f97316":"rgba(255,255,255,0.12)"}`,background:contentType===val?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:contentType===val?"#f97316":"#999",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Genre filter */}
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{...S.muted,fontSize:11}}>GENRES {selectedGenres.length>0&&<span style={{color:"#f97316"}}>({selectedGenres.length} selected)</span>}</div>
+              {selectedGenres.length>0&&<button onClick={()=>setSelectedGenres([])} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:11,cursor:"pointer"}}>Clear</button>}
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {ALL_GENRES.map(g=>(
+                <button key={g} onClick={()=>toggleGenre(g)}
+                  style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${selectedGenres.includes(g)?"#f97316":"rgba(255,255,255,0.12)"}`,background:selectedGenres.includes(g)?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:selectedGenres.includes(g)?"#f97316":"#999",fontSize:11,cursor:"pointer"}}>
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{...S.muted,fontSize:11,marginTop:10,textAlign:"center"}}>
+            {unswiped} titles match your filters
+          </div>
+        </div>
+      )}
+
+      <div style={S.progBar}><div style={{...S.progFill,width:`${(Object.keys(swipes).length/Math.max(fullQueue.length,1))*100}%`}}/></div>
 
       {done?(
         <div style={S.empty}>
-          <div style={{fontSize:56}}>🎉</div>
-          <h3 style={{color:"#fff",margin:0}}>All done!</h3>
-          <p style={S.muted}>You've swiped everything.</p>
+          <div style={{fontSize:56}}>{selectedGenres.length>0||contentType!=="both"?"🔍":"🎉"}</div>
+          <h3 style={{color:"#fff",margin:0}}>{selectedGenres.length>0||contentType!=="both"?"No titles match":"All done!"}</h3>
+          <p style={S.muted}>{selectedGenres.length>0||contentType!=="both"?"Try adjusting your filters":"You've swiped everything."}</p>
+          {(selectedGenres.length>0||contentType!=="both")&&<button style={{...S.btn,background:"rgba(255,255,255,0.08)"}} onClick={()=>{setSelectedGenres([]);setContentType("both");}}>Clear Filters</button>}
           <button style={S.btn} onClick={onViewMatches}>See {matches.length} Matches →</button>
         </div>
       ):(
