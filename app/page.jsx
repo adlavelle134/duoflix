@@ -1211,6 +1211,8 @@ function TutorialScreen({ profile, catalog, onComplete }) {
   const [dragX, setDragX]           = useState(0);
   const [dragging, setDragging]     = useState(false);
   const [exiting, setExiting]       = useState(null);
+  const [wrongSwipe, setWrongSwipe] = useState(false);
+  const [bellTapped, setBellTapped] = useState(false);
   const dragStart = useRef(null);
   const exitingRef = useRef(false);
 
@@ -1236,8 +1238,6 @@ function TutorialScreen({ profile, catalog, onComplete }) {
   const current = steps[step];
 
   const next = () => setStep(s => Math.min(s + 1, steps.length - 1));
-
-  const [wrongSwipe, setWrongSwipe] = useState(false);
 
   const handleSwipe = (dir) => {
     if (exitingRef.current) return;
@@ -1478,7 +1478,6 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 
   // ── STEP 7: Notifications — fake home screen with bell ──
   if (step === 7) {
-    const [bellTapped, setBellTapped] = useState(false);
     return (
       <div style={S.page}>
         <div style={S.shell}>
