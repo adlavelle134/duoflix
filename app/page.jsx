@@ -489,54 +489,128 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
 }
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
-function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditProfile }) {
-  const [showMenu, setShowMenu] = useState(false);
+function HomeScreen({ profile, rooms, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms }) {
+  const [showMenu, setShowMenu]   = useState(false);
+  const [editMode, setEditMode]   = useState(false);
+  const [selected, setSelected]   = useState(new Set());
+  const [confirming, setConfirming] = useState(false);
+
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const cancelEdit = () => { setEditMode(false); setSelected(new Set()); setConfirming(false); };
+
+  const handleDelete = async () => {
+    await onDeleteRooms([...selected]);
+    cancelEdit();
+  };
+
   return (
     <div style={S.page}><div style={S.shell}>
       <header style={S.hdr}>
         <div style={S.logo}>DuoFlix</div>
-        <div style={{position:"relative"}}>
-          <button onClick={()=>setShowMenu(p=>!p)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:20,color:"#fff",fontSize:13,fontWeight:600,padding:"6px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-            😊 {profile?.name?.split(" ")[0]} ▾
-          </button>
-          {showMenu&&(
-            <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
-              <button style={S.menuItem} onClick={()=>{onEditProfile();setShowMenu(false);}}>✏️ Edit Profile</button>
-              <button style={{...S.menuItem,color:"#ef4444"}} onClick={onSignOut}>🚪 Sign Out</button>
-            </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {rooms.length>0&&!editMode&&(
+            <button onClick={()=>setEditMode(true)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.6)",fontSize:13,padding:"6px 12px",cursor:"pointer"}}>
+              Edit
+            </button>
           )}
+          {editMode&&(
+            <button onClick={cancelEdit} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.6)",fontSize:13,padding:"6px 12px",cursor:"pointer"}}>
+              Cancel
+            </button>
+          )}
+          <div style={{position:"relative"}}>
+            <button onClick={()=>setShowMenu(p=>!p)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:20,color:"#fff",fontSize:13,fontWeight:600,padding:"6px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+              😊 {profile?.name?.split(" ")[0]} ▾
+            </button>
+            {showMenu&&(
+              <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
+                <button style={S.menuItem} onClick={()=>{onEditProfile();setShowMenu(false);}}>✏️ Edit Profile</button>
+                <button style={{...S.menuItem,color:"#ef4444"}} onClick={onSignOut}>🚪 Sign Out</button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       <div style={{color:"#fff",fontSize:22,fontWeight:700}}>Hey, {profile?.name?.split(" ")[0]} 👋</div>
-      <div style={{...S.muted,marginBottom:20}}>Your watch rooms</div>
+      <div style={{...S.muted,marginBottom:20}}>
+        {editMode ? `Select rooms to delete` : "Your watch rooms"}
+      </div>
 
       {rooms.length===0
         ?<div style={S.empty}><div style={{fontSize:52}}>🎬</div><p>No rooms yet — find a partner to start swiping!</p></div>
         :rooms.map((r)=>{
           const swiped=Object.keys(r.userSwipes||{}).length;
           const pct=Math.round((swiped/Math.max(r.queue?.length||1,1))*100);
+          const isSelected = selected.has(r.id);
           return(
-            <div key={r.id} style={S.roomCard} onClick={()=>onOpenRoom(r)}>
+            <div key={r.id}
+              style={{...S.roomCard,
+                border: editMode
+                  ? isSelected ? "1px solid #ef4444" : "1px solid rgba(255,255,255,0.15)"
+                  : "1px solid rgba(255,255,255,0.07)",
+                background: isSelected ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.04)",
+                transition:"all 0.15s"
+              }}
+              onClick={()=> editMode ? toggleSelect(r.id) : onOpenRoom(r)}
+            >
               <div style={{display:"flex",alignItems:"center",gap:12}}>
+                {editMode&&(
+                  <div style={{width:22,height:22,borderRadius:"50%",border:`2px solid ${isSelected?"#ef4444":"rgba(255,255,255,0.3)"}`,background:isSelected?"#ef4444":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:12,color:"#fff"}}>
+                    {isSelected?"✓":""}
+                  </div>
+                )}
                 {r.matches?.[0]?.poster
                   ?<img src={r.matches[0].poster} style={{width:40,height:56,objectFit:"cover",borderRadius:6}}/>
                   :<div style={{width:40,height:56,background:"rgba(255,255,255,0.07)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
                 }
                 <div>
-                  <div style={{color:"#fff",fontWeight:600}}>{r.partner.avatar} {r.partner.name}</div>
+                  <div style={{color:"#fff",fontWeight:600}}>{r.partner.avatar||"😊"} {r.partner.name}</div>
                   <div style={S.muted}>❤️ {r.matches?.length||0} matches · {pct}% swiped</div>
                   <div style={{marginTop:4,height:2,width:110,background:"rgba(255,255,255,0.08)",borderRadius:2}}>
                     <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#f97316,#ec4899)",borderRadius:2}}/>
                   </div>
                 </div>
               </div>
-              <div style={{color:"rgba(255,255,255,0.25)",fontSize:20}}>→</div>
+              {!editMode&&<div style={{color:"rgba(255,255,255,0.25)",fontSize:20}}>→</div>}
             </div>
           );
         })
       }
-      <button style={{...S.btn,marginTop:"auto",width:"100%"}} onClick={onSearch}>+ Find a Watch Partner</button>
+
+      {/* Delete bar — appears when rooms are selected */}
+      {editMode&&(
+        <div style={{marginTop:"auto"}}>
+          {!confirming ? (
+            <button
+              style={{...S.btn,width:"100%",background:selected.size>0?"linear-gradient(135deg,#ef4444,#dc2626)":"rgba(255,255,255,0.07)",opacity:selected.size>0?1:0.4}}
+              onClick={()=>selected.size>0&&setConfirming(true)}
+            >
+              🗑️ Delete {selected.size>0?`${selected.size} Room${selected.size>1?"s":""}`:""} 
+            </button>
+          ):(
+            <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:14,padding:"16px",textAlign:"center"}}>
+              <div style={{color:"#fff",fontWeight:600,marginBottom:8}}>Delete {selected.size} room{selected.size>1?"s":""}?</div>
+              <div style={{...S.muted,fontSize:12,marginBottom:14}}>This can't be undone. All swipes and matches will be lost.</div>
+              <div style={{display:"flex",gap:10}}>
+                <button style={{flex:1,background:"rgba(255,255,255,0.07)",border:"none",borderRadius:10,color:"#fff",padding:"10px",cursor:"pointer",fontSize:14}} onClick={()=>setConfirming(false)}>Cancel</button>
+                <button style={{flex:1,background:"linear-gradient(135deg,#ef4444,#dc2626)",border:"none",borderRadius:10,color:"#fff",padding:"10px",cursor:"pointer",fontSize:14,fontWeight:700}} onClick={handleDelete}>Delete</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!editMode&&(
+        <button style={{...S.btn,marginTop:"auto",width:"100%"}} onClick={onSearch}>+ Find a Watch Partner</button>
+      )}
     </div></div>
   );
 }
