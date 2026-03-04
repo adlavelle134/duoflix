@@ -1266,16 +1266,27 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 
   // ── STEP 0: Intro ──
   if (step === 0) return (
-    <div style={{...S.page, justifyContent:"center", alignItems:"center", gap:24, padding:32}}>
-      <div style={{animation:"flixiePop 0.5s ease"}}>
-        <Flixie size={120} animate={true}/>
+    <div style={{...S.page, justifyContent:"space-between", alignItems:"center", padding:"48px 28px 40px", boxSizing:"border-box"}}>
+      {/* Top: Logo */}
+      <div style={{textAlign:"center", width:"100%"}}>
+        <div style={S.bigLogo}>DuoFlix</div>
       </div>
-      <div style={{textAlign:"center"}}>
-        <div style={{color:"#fff",fontSize:26,fontWeight:800,marginBottom:8}}>Meet Flixie! 🍿</div>
-        <div style={{color:"rgba(255,255,255,0.6)",fontSize:14,lineHeight:1.6,marginBottom:24}}>{current.flixie}<br/><br/>{current.sub}</div>
+      {/* Middle: Flixie + text */}
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20,textAlign:"center",width:"100%"}}>
+        <div style={{animation:"flixiePop 0.5s ease"}}>
+          <Flixie size={130} animate={true}/>
+        </div>
+        <div>
+          <div style={{color:"#fff",fontSize:26,fontWeight:800,marginBottom:12}}>Meet Flixie! 🍿</div>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.flixie}</div>
+          <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6,marginTop:8}}>{current.sub}</div>
+        </div>
       </div>
-      <button style={{...S.btn, width:"100%"}} onClick={next}>Let's Go! →</button>
-      <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer"}}>Skip tutorial</button>
+      {/* Bottom: Buttons */}
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12,width:"100%"}}>
+        <button style={{...S.btn, width:"100%", fontSize:16, padding:"14px"}} onClick={next}>Let's Go! →</button>
+        <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer"}}>Skip tutorial</button>
+      </div>
     </div>
   );
 
@@ -1579,24 +1590,28 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 
   // ── STEP 9: Done! ──
   return (
-    <div style={{...S.page,justifyContent:"center",alignItems:"center",gap:20,padding:32}}>
-      <div style={{animation:"flixiePop 0.5s ease"}}>
-        <Flixie size={120} animate={true}/>
+    <div style={{...S.page, justifyContent:"space-between", alignItems:"center", padding:"48px 28px 40px", boxSizing:"border-box"}}>
+      {/* Top: Logo */}
+      <div style={{textAlign:"center", width:"100%"}}>
+        <div style={S.bigLogo}>DuoFlix</div>
       </div>
-      <div style={{textAlign:"center"}}>
-        <div style={{color:"#fff",fontSize:28,fontWeight:800,marginBottom:8}}>You're ready! 🎉</div>
-        <div style={{color:"rgba(255,255,255,0.6)",fontSize:14,lineHeight:1.7,marginBottom:8}}>{current.flixie}</div>
-        <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6}}>{current.sub}</div>
-      </div>
-      <div style={{width:"100%",background:"rgba(255,255,255,0.05)",borderRadius:14,padding:16,textAlign:"center"}}>
-        <div style={{color:"rgba(255,255,255,0.5)",fontSize:12,lineHeight:1.8}}>
-          👈 Swipe left to skip · 👉 Swipe right to watch<br/>
-          ❤️ See your matches · 🔔 Get notified · ✅ Mark watched
+      {/* Middle: Flixie + text */}
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20,textAlign:"center",width:"100%"}}>
+        <div style={{animation:"flixiePop 0.5s ease"}}>
+          <Flixie size={130} animate={true}/>
+        </div>
+        <div>
+          <div style={{color:"#fff",fontSize:28,fontWeight:800,marginBottom:12}}>You're ready! 🎉</div>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.flixie}</div>
+          <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6,marginTop:8}}>{current.sub}</div>
         </div>
       </div>
-      <button style={{...S.btn,width:"100%",fontSize:16,padding:"14px"}} onClick={onComplete}>
-        Let's Start Swiping! 🍿
-      </button>
+      {/* Bottom: Button */}
+      <div style={{width:"100%"}}>
+        <button style={{...S.btn,width:"100%",fontSize:16,padding:"14px"}} onClick={onComplete}>
+          Let's Start Swiping! 🍿
+        </button>
+      </div>
     </div>
   );
 }
