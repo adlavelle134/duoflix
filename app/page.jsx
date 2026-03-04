@@ -74,7 +74,7 @@ async function tryFetchLiveCatalog(onProgress) {
         for (const m of (d.results||[])) {
           if (seen.has(`m${m.id}`)) continue;
           seen.add(`m${m.id}`);
-          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W780+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",popularity:m.popularity||0,services:[] });
+          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W780+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",popularity:m.popularity||0,language:m.original_language||"en",services:[] });
         }
         if (p%5===0) onProgress(Math.round((p/50)*50));
       } catch(e){}
@@ -87,13 +87,18 @@ async function tryFetchLiveCatalog(onProgress) {
         for (const t of (d.results||[])) {
           if (seen.has(`t${t.id}`)) continue;
           seen.add(`t${t.id}`);
-          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W780+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",popularity:t.popularity||0,services:[] });
+          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W780+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",popularity:t.popularity||0,language:t.original_language||"en",services:[] });
         }
       } catch(e){}
     }
 
     // Fetch providers for ALL titles in batches of 40 with a small delay
     // to stay within TMDB's rate limit of ~40 requests/second
+    // Keep only English language titles
+    const englishOnly = all.filter(t => t.language === "en");
+    all.length = 0;
+    all.push(...englishOnly);
+
     onProgress(65);
     const BATCH_SIZE = 40;
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
