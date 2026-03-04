@@ -653,6 +653,7 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
             {showMenu&&(
               <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
                 <button style={S.menuItem} onClick={()=>{onEditProfile();setShowMenu(false);}}>✏️ Edit Profile</button>
+                <button style={S.menuItem} onClick={()=>{onRestartTutorial();setShowMenu(false);}}>🍿 Tutorial</button>
                 <button style={{...S.menuItem,color:"#ef4444"}} onClick={onSignOut}>🚪 Sign Out</button>
               </div>
             )}
