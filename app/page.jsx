@@ -1527,7 +1527,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
                   <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,zIndex:50,minWidth:240,overflow:"hidden",animation:"slideUp 0.3s ease"}}>
                     <div style={{padding:"12px 16px 8px",color:"#fff",fontWeight:700,fontSize:13,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>Notifications</div>
                     <div style={{padding:"10px 16px"}}>
-                      <div style={{color:"#fff",fontSize:13}}>🎉 You matched on "Butter Me Up"!</div>
+                      <div style={{color:"#fff",fontSize:13}}>🎉 You matched on "The Popcorn Chronicles"!</div>
                       <div style={{color:"rgba(255,255,255,0.3)",fontSize:11,marginTop:2}}>Just now</div>
                     </div>
                   </div>
