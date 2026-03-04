@@ -1266,12 +1266,12 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 
   // ── STEP 0: Intro ──
   if (step === 0) return (
-    <div style={{...S.page, alignItems:"center", padding:"40px 28px 40px", boxSizing:"border-box", gap:28}}>
+    <div style={{...S.page, flexDirection:"column", justifyContent:"flex-start", alignItems:"center", padding:"40px 28px 40px", boxSizing:"border-box", gap:28, overflowY:"auto"}}>
       <div style={S.bigLogo}>DuoFlix</div>
       <div style={{animation:"flixiePop 0.5s ease"}}>
         <Flixie size={130} animate={true}/>
       </div>
-      <div style={{textAlign:"center"}}>
+      <div style={{textAlign:"center", width:"100%"}}>
         <div style={{color:"#fff",fontSize:24,fontWeight:800,marginBottom:12}}>Meet Flixie! 🍿</div>
         <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.flixie}</div>
         <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6,marginTop:8}}>{current.sub}</div>
@@ -1583,12 +1583,12 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 
   // ── STEP 9: Done! ──
   return (
-    <div style={{...S.page, alignItems:"center", padding:"40px 28px 40px", boxSizing:"border-box", gap:28}}>
+    <div style={{...S.page, flexDirection:"column", justifyContent:"flex-start", alignItems:"center", padding:"40px 28px 40px", boxSizing:"border-box", gap:28, overflowY:"auto"}}>
       <div style={S.bigLogo}>DuoFlix</div>
       <div style={{animation:"flixiePop 0.5s ease"}}>
         <Flixie size={130} animate={true}/>
       </div>
-      <div style={{textAlign:"center"}}>
+      <div style={{textAlign:"center", width:"100%"}}>
         <div style={{color:"#fff",fontSize:26,fontWeight:800,marginBottom:12}}>You're ready! 🎉</div>
         <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.flixie}</div>
         <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6,marginTop:8}}>{current.sub}</div>
