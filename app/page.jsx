@@ -241,6 +241,8 @@ async function loadRoomsFromDB(userId, catalog) {
         userSwipes: mySwipes,
         partnerSwipes,
         matches,
+        contentType: r.content_type || "both",
+        genres: r.genres || [],
       };
     }));
 
@@ -364,7 +366,9 @@ export default function DuoFlix() {
     const partnerId = r.partner?.id;
     const partnerSwipes = swipesByUser[partnerId] || {};
     const matches = (r.queue||[]).filter(t => mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like");
-    setActiveRoom({...r, userSwipes: mySwipes, partnerSwipes, matches});
+    // Also fetch latest filters from DB
+    const { data: freshRoom } = await supabase.from("rooms").select("content_type,genres").eq("id", r.id).single();
+    setActiveRoom({...r, userSwipes: mySwipes, partnerSwipes, matches, contentType: freshRoom?.content_type||r.contentType||"both", genres: freshRoom?.genres||r.genres||[]});
     setScreen("swipe");
   }}
       onSignOut={handleSignOut}
@@ -714,14 +718,38 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting]   = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [contentType, setContentType] = useState("both"); // both | movie | tv
-  const [selectedGenres, setSelectedGenres] = useState([]);
+  const [contentType, setContentType] = useState(room.contentType||"both");
+  const [selectedGenres, setSelectedGenres] = useState(room.genres||[]);
+  const [filterSaving, setFilterSaving] = useState(false);
   const dragStart = useRef(null);
   const exitingRef = useRef(false);
 
-  const toggleGenre = (g) => setSelectedGenres(prev =>
-    prev.includes(g) ? prev.filter(x=>x!==g) : [...prev, g]
-  );
+  const saveFilters = async (newContentType, newGenres) => {
+    setFilterSaving(true);
+    room.contentType = newContentType;
+    room.genres = newGenres;
+    await persistRoom(room);
+    setFilterSaving(false);
+  };
+
+  const handleContentType = (val) => {
+    setContentType(val);
+    saveFilters(val, selectedGenres);
+  };
+
+  const toggleGenre = (g) => {
+    const next = selectedGenres.includes(g)
+      ? selectedGenres.filter(x=>x!==g)
+      : [...selectedGenres, g];
+    setSelectedGenres(next);
+    saveFilters(contentType, next);
+  };
+
+  const clearFilters = () => {
+    setSelectedGenres([]);
+    setContentType("both");
+    saveFilters("both", []);
+  };
 
   const fullQueue = room.queue||[];
 
@@ -784,14 +812,17 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
       {/* Filter Panel */}
       {showFilters&&(
         <div style={{background:"rgba(20,20,32,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"16px",marginBottom:12}}>
-          <div style={{color:"#fff",fontWeight:700,fontSize:14,marginBottom:12}}>Filter Titles</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{color:"#fff",fontWeight:700,fontSize:14}}>Filter Titles</div>
+            <div style={{...S.muted,fontSize:11}}>{filterSaving ? "Saving..." : "Synced for both users ✓"}</div>
+          </div>
 
           {/* Content type */}
           <div style={{marginBottom:12}}>
             <div style={{...S.muted,fontSize:11,marginBottom:6}}>CONTENT TYPE</div>
             <div style={{display:"flex",gap:6}}>
               {[["both","🎬 Both"],["movie","🎥 Movies"],["tv","📺 TV Shows"]].map(([val,label])=>(
-                <button key={val} onClick={()=>setContentType(val)}
+                <button key={val} onClick={()=>handleContentType(val)}
                   style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${contentType===val?"#f97316":"rgba(255,255,255,0.12)"}`,background:contentType===val?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:contentType===val?"#f97316":"#999",fontSize:11,fontWeight:600,cursor:"pointer"}}>
                   {label}
                 </button>
@@ -803,7 +834,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
               <div style={{...S.muted,fontSize:11}}>GENRES {selectedGenres.length>0&&<span style={{color:"#f97316"}}>({selectedGenres.length} selected)</span>}</div>
-              {selectedGenres.length>0&&<button onClick={()=>setSelectedGenres([])} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:11,cursor:"pointer"}}>Clear</button>}
+              {selectedGenres.length>0&&<button onClick={()=>{ setSelectedGenres([]); saveFilters(contentType, []); }} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:11,cursor:"pointer"}}>Clear</button>}
             </div>
             <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
               {ALL_GENRES.map(g=>(
@@ -828,7 +859,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
           <div style={{fontSize:56}}>{selectedGenres.length>0||contentType!=="both"?"🔍":"🎉"}</div>
           <h3 style={{color:"#fff",margin:0}}>{selectedGenres.length>0||contentType!=="both"?"No titles match":"All done!"}</h3>
           <p style={S.muted}>{selectedGenres.length>0||contentType!=="both"?"Try adjusting your filters":"You've swiped everything."}</p>
-          {(selectedGenres.length>0||contentType!=="both")&&<button style={{...S.btn,background:"rgba(255,255,255,0.08)"}} onClick={()=>{setSelectedGenres([]);setContentType("both");}}>Clear Filters</button>}
+          {(selectedGenres.length>0||contentType!=="both")&&<button style={{...S.btn,background:"rgba(255,255,255,0.08)"}} onClick={clearFilters}>Clear Filters</button>}
           <button style={S.btn} onClick={onViewMatches}>See {matches.length} Matches →</button>
         </div>
       ):(
