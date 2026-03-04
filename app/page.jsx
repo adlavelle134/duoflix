@@ -1211,6 +1211,129 @@ const DEMO_MOVIES = [
     poster: null, backdrop: null },
 ];
 
+
+// ─── DEMO MOVIE POSTERS ───────────────────────────────────────────────────────
+
+// Poster 1: "The Popcorn Chronicles" — dramatic popcorn adventure
+function PosterPopcornChronicles() {
+  return (
+    <svg width="158" height="237" viewBox="0 0 158 237" xmlns="http://www.w3.org/2000/svg">
+      {/* Sky background */}
+      <defs>
+        <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0f0c29"/>
+          <stop offset="100%" stopColor="#302b63"/>
+        </linearGradient>
+        <linearGradient id="ground1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#24243e"/>
+          <stop offset="100%" stopColor="#0f0c29"/>
+        </linearGradient>
+        <radialGradient id="glow1" cx="50%" cy="40%" r="40%">
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.6"/>
+          <stop offset="100%" stopColor="#f97316" stopOpacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="158" height="237" fill="url(#sky1)" rx="10"/>
+      {/* Glow behind hero */}
+      <ellipse cx="79" cy="95" rx="55" ry="55" fill="url(#glow1)"/>
+      {/* Stars */}
+      {[[15,20],[30,12],[55,8],[90,15],[120,10],[140,22],[10,45],[145,40],[25,60],[135,65]].map(([x,y],i)=>(
+        <circle key={i} cx={x} cy={y} r="1.2" fill="white" opacity="0.8"/>
+      ))}
+      {/* Moon */}
+      <circle cx="125" cy="28" r="12" fill="#fef3c7"/>
+      <circle cx="130" cy="24" r="10" fill="#302b63"/>
+      {/* Ground */}
+      <rect x="0" y="175" width="158" height="62" fill="url(#ground1)" rx="0"/>
+      {/* Heroic popcorn bucket */}
+      <path d="M54 120 L60 175 L98 175 L104 120 Z" fill="white"/>
+      <path d="M54 120 L60 175 L65 175 L59 120 Z" fill="#E53935"/>
+      <path d="M68 120 L74 175 L79 175 L73 120 Z" fill="#E53935"/>
+      <path d="M82 120 L88 175 L93 175 L87 120 Z" fill="#E53935"/>
+      <path d="M96 120 L98 175 L104 175 L104 120 Z" fill="#E53935"/>
+      <rect x="51" y="115" width="56" height="9" rx="4" fill="#E53935"/>
+      {/* Popcorn kernels - heroic spread */}
+      <circle cx="79" cy="85" r="14" fill="#FFF176"/>
+      <circle cx="63" cy="95" r="11" fill="#FFF9C4"/>
+      <circle cx="95" cy="95" r="11" fill="#FFF176"/>
+      <circle cx="72" cy="75" r="10" fill="#FFF9C4"/>
+      <circle cx="86" cy="75" r="10" fill="#FFF176"/>
+      <circle cx="55" cy="108" r="9" fill="#FFF9C4"/>
+      <circle cx="103" cy="108" r="9" fill="#FFF176"/>
+      <circle cx="79" cy="68" r="9" fill="#FFF176"/>
+      {/* Cape */}
+      <path d="M68 130 Q50 155 45 175 L60 175 Q62 155 74 138 Z" fill="#E53935" opacity="0.9"/>
+      {/* Title text */}
+      <rect x="0" y="188" width="158" height="49" fill="rgba(0,0,0,0.7)" rx="0"/>
+      <text x="79" y="206" textAnchor="middle" fill="#f97316" fontSize="8" fontWeight="bold" fontFamily="Arial">THE POPCORN</text>
+      <text x="79" y="218" textAnchor="middle" fill="#f97316" fontSize="8" fontWeight="bold" fontFamily="Arial">CHRONICLES</text>
+      <text x="79" y="230" textAnchor="middle" fill="#fef3c7" fontSize="6" fontFamily="Arial">A KERNEL PRODUCTION</text>
+    </svg>
+  );
+}
+
+// Poster 2: "Butter Me Up" — romantic comedy poster
+function PosterButterMeUp() {
+  return (
+    <svg width="158" height="237" viewBox="0 0 158 237" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="romBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ff6b9d"/>
+          <stop offset="50%" stopColor="#c44569"/>
+          <stop offset="100%" stopColor="#f8a5c2"/>
+        </linearGradient>
+        <radialGradient id="microGlow" cx="50%" cy="55%" r="45%">
+          <stop offset="0%" stopColor="#ffd32a" stopOpacity="0.5"/>
+          <stop offset="100%" stopColor="#ffd32a" stopOpacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="158" height="237" fill="url(#romBg)" rx="10"/>
+      {/* Soft bokeh circles */}
+      {[[20,30,18],[130,25,14],[10,80,10],[148,70,12],[15,160,16],[140,155,10],[79,20,20]].map(([x,y,r],i)=>(
+        <circle key={i} cx={x} cy={y} r={r} fill="white" opacity="0.07"/>
+      ))}
+      {/* Microwave */}
+      <rect x="24" y="95" width="110" height="80" rx="8" fill="#2d3436"/>
+      <rect x="30" y="101" width="72" height="62" rx="4" fill="#1a1a2e"/>
+      {/* Microwave glow */}
+      <ellipse cx="66" cy="132" rx="28" ry="22" fill="url(#microGlow)"/>
+      {/* Kernel 1 - left */}
+      <ellipse cx="55" cy="132" rx="10" ry="13" fill="#FFF9C4"/>
+      <circle cx="51" cy="128" r="3" fill="#1a1a2e"/>
+      <circle cx="59" cy="128" r="3" fill="#1a1a2e"/>
+      <circle cx="52" cy="127" r="1" fill="white"/>
+      <circle cx="60" cy="127" r="1" fill="white"/>
+      <path d="M51 136 Q55 140 59 136" stroke="#1a1a2e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+      {/* Heart between them */}
+      <path d="M66 128 C66 125 69 123 71 126 C73 123 76 125 76 128 C76 131 71 135 71 135 C71 135 66 131 66 128Z" fill="#ff6b9d"/>
+      {/* Kernel 2 - right */}
+      <ellipse cx="83" cy="132" rx="10" ry="13" fill="#FFF176"/>
+      <circle cx="79" cy="128" r="3" fill="#1a1a2e"/>
+      <circle cx="87" cy="128" r="3" fill="#1a1a2e"/>
+      <circle cx="80" cy="127" r="1" fill="white"/>
+      <circle cx="88" cy="127" r="1" fill="white"/>
+      <path d="M79 136 Q83 140 87 136" stroke="#1a1a2e" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+      {/* Microwave controls */}
+      <rect x="106" y="105" width="22" height="50" rx="3" fill="#374151"/>
+      {[[112,112],[112,122],[112,132],[112,142],[112,152]].map(([x,y],i)=>(
+        <circle key={i} cx={x} cy={y} r="3" fill={i===0?"#ffd32a":"#6b7280"}/>
+      ))}
+      <rect x="108" y="108" width="8" height="4" rx="1" fill="#10b981"/>
+      {/* Floating hearts */}
+      {[[35,60,8],[115,50,6],[25,130,5],[140,120,7],[70,45,5]].map(([x,y,s],i)=>(
+        <path key={i} d={`M${x} ${y} C${x} ${y-s*0.6} ${x+s*0.8} ${y-s} ${x+s} ${y-s*0.3} C${x+s*1.2} ${y-s} ${x+s*2} ${y-s*0.6} ${x+s*2} ${y} C${x+s*2} ${y+s*0.8} ${x+s} ${y+s*1.5} ${x+s} ${y+s*1.5} C${x+s} ${y+s*1.5} ${x} ${y+s*0.8} ${x} ${y}Z`}
+          fill="white" opacity="0.25"/>
+      ))}
+      {/* Title */}
+      <rect x="0" y="185" width="158" height="52" fill="rgba(0,0,0,0.5)" rx="0"/>
+      <text x="79" y="205" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="Arial">BUTTER ME UP</text>
+      <path d="M20 210 L138 210" stroke="#ffd32a" strokeWidth="0.8" opacity="0.5"/>
+      <text x="79" y="222" textAnchor="middle" fill="#ffd32a" fontSize="6.5" fontFamily="Arial">A LOVE STORY · COMING NEVER</text>
+      <text x="79" y="232" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="5.5" fontFamily="Arial">★★★★★  "I cried." — KERNEL</text>
+    </svg>
+  );
+}
+
 function TutorialScreen({ profile, catalog, onComplete }) {
   const [step, setStep]             = useState(0);
   const [swipeDir, setSwipeDir]     = useState(null);
@@ -1393,7 +1516,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
             <div style={{...S.likeStamp,opacity:likeOp}}>WATCH</div>
             <div style={{...S.nopeStamp,opacity:passOp}}>SKIP</div>
             <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 20px 18px",gap:9,width:"100%",boxSizing:"border-box"}}>
-              <div style={{width:158,height:237,borderRadius:12,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:60}}>🎬</div>
+              <PosterPopcornChronicles/>
               <div style={{color:"#fff",fontSize:17,fontWeight:700,textAlign:"center"}}>{movie.title}</div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={S.muted}>{movie.year} · Film</span>
@@ -1441,7 +1564,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
             <div style={{...S.likeStamp,opacity:likeOp}}>WATCH</div>
             <div style={{...S.nopeStamp,opacity:passOp}}>SKIP</div>
             <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 20px 18px",gap:9,width:"100%",boxSizing:"border-box"}}>
-              <div style={{width:158,height:237,borderRadius:12,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:60}}>🍿</div>
+              <PosterButterMeUp/>
               <div style={{color:"#fff",fontSize:17,fontWeight:700,textAlign:"center"}}>{movie.title}</div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={S.muted}>{movie.year} · Film</span>
@@ -1556,7 +1679,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Up Next (1)</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div style={S.matchCard}>
-              <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🍿</div>
+              <div style={{borderRadius:"10px 10px 0 0",overflow:"hidden"}}><PosterButterMeUp/></div>
               <div style={{padding:"8px 8px 10px"}}>
                 <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6}}>Butter Me Up</div>
                 <button onClick={()=>setWatchedIt(true)} style={{width:"100%",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,color:"#22c55e",fontSize:11,fontWeight:600,padding:"5px",cursor:"pointer",animation:"pulse 1.2s ease infinite"}}>
@@ -1572,7 +1695,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div style={{...S.matchCard,opacity:0.5}}>
               <div style={{position:"relative"}}>
-                <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48}}>🍿</div>
+                <div style={{borderRadius:"10px 10px 0 0",overflow:"hidden"}}><PosterButterMeUp/></div>
                 <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>✅</div>
               </div>
               <div style={{padding:"8px 8px 10px"}}>
