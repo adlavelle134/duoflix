@@ -399,6 +399,25 @@ export default function DuoFlix() {
       authUser={authUser}
       profile={profile}
       rooms={rooms}
+      catalog={catalog}
+      onBack={()=>setScreen("home")}
+      onMyMovies={()=>setScreen("mymovies")}
+    />
+  );
+  if (screen === "mymovies") return (
+    <MyMoviesScreen
+      authUser={authUser}
+      catalog={catalog}
+      onBack={()=>setScreen("stats")}
+    />
+  );
+  if (screen === "about") return (
+    <AboutScreen onBack={()=>setScreen("home")}/>
+  );
+  if (screen === "feedback") return (
+    <FeedbackScreen
+      authUser={authUser}
+      profile={profile}
       onBack={()=>setScreen("home")}
     />
   );
@@ -468,6 +487,8 @@ export default function DuoFlix() {
       onEditProfile={()=>setScreen("setup")}
       onRestartTutorial={()=>setScreen("tutorial")}
       onViewStats={()=>setScreen("stats")}
+      onAbout={()=>setScreen("about")}
+      onFeedback={()=>setScreen("feedback")}
       onDeleteRooms={async (ids) => {
         try {
           await supabase.from("swipes").delete().in("room_id", ids);
@@ -597,7 +618,7 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
 }
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
-function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms, onRestartTutorial, onViewStats }) {
+function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSearch, onOpenRoom, onSignOut, onEditProfile, onDeleteRooms, onRestartTutorial, onViewStats, onAbout, onFeedback }) {
   const [showMenu, setShowMenu]   = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [editMode, setEditMode]   = useState(false);
@@ -661,9 +682,11 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
             </button>
             {showMenu&&(
               <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
+                <button style={S.menuItem} onClick={()=>{onAbout();setShowMenu(false);}}>🎬 About DuoFlix</button>
                 <button style={S.menuItem} onClick={()=>{onEditProfile();setShowMenu(false);}}>✏️ Edit Profile</button>
                 <button style={S.menuItem} onClick={()=>{onViewStats();setShowMenu(false);}}>📊 My Stats</button>
                 <button style={S.menuItem} onClick={()=>{onRestartTutorial();setShowMenu(false);}}>🍿 Kernel's Tutorial</button>
+                <button style={S.menuItem} onClick={()=>{onFeedback();setShowMenu(false);}}>💬 Submit Feedback</button>
                 <button style={{...S.menuItem,color:"#ef4444"}} onClick={onSignOut}>🚪 Sign Out</button>
               </div>
             )}
@@ -1627,8 +1650,210 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 }
 
 
+
+// ─── ABOUT SCREEN ─────────────────────────────────────────────────────────────
+function AboutScreen({ onBack }) {
+  return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={onBack}>←</button>
+        <div style={S.logo}>About DuoFlix</div>
+        <div style={{width:40}}/>
+      </header>
+      <div style={{overflowY:"auto",display:"flex",flexDirection:"column",gap:20,paddingBottom:20}}>
+        <div style={{textAlign:"center",padding:"8px 0"}}>
+          <div style={S.bigLogo}>DuoFlix</div>
+          <div style={{...S.muted,fontStyle:"italic",marginTop:4}}>Swipe together. Match together. Watch together.</div>
+        </div>
+        <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"20px 18px",display:"flex",flexDirection:"column",gap:16}}>
+          {[
+            {text:"Choosing a movie shouldn't take longer than watching one.", bold:true},
+            {text:"DuoFlix helps friends, couples, and families quickly find something everyone wants to watch. Instead of scrolling endlessly across streaming apps, DuoFlix lets you swipe through movies and shows available on your streaming services.", bold:false},
+            {text:'When two people swipe "yes" on the same title, it\'s a match.', bold:false, italic:true},
+            {text:"No debates. No endless browsing. Just press play.", bold:false, italic:true},
+            {text:"DuoFlix aggregates streaming availability across major platforms so you always know where something is actually available to watch.", bold:false},
+            {text:"Because the hardest part of movie night shouldn't be choosing the movie.", bold:true},
+          ].map((para,i)=>(
+            <p key={i} style={{color:para.bold?"#fff":"rgba(255,255,255,0.65)",fontSize:para.bold?15:14,fontWeight:para.bold?700:400,lineHeight:1.7,margin:0,fontStyle:para.italic?"italic":"normal"}}>{para.text}</p>
+          ))}
+        </div>
+        <div style={{textAlign:"center",color:"rgba(255,255,255,0.2)",fontSize:12}}>Made with 🍿 by DuoFlix</div>
+      </div>
+    </div></div>
+  );
+}
+
+// ─── FEEDBACK SCREEN ──────────────────────────────────────────────────────────
+function FeedbackScreen({ authUser, profile, onBack }) {
+  const [msg, setMsg]       = useState("");
+  const [status, setStatus] = useState(null);
+
+  const handleSubmit = async () => {
+    if (!msg.trim()) return;
+    setStatus("sending");
+    try {
+      await supabase.from("feedback").insert({
+        user_id: authUser.id,
+        user_name: profile?.name || "Unknown",
+        message: msg.trim(),
+      });
+      setMsg("");
+      setStatus("sent");
+      setTimeout(() => setStatus(null), 3000);
+    } catch(e) {
+      console.error("Feedback error:", e);
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={onBack}>←</button>
+        <div style={S.logo}>Submit Feedback</div>
+        <div style={{width:40}}/>
+      </header>
+      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"16px 18px",marginBottom:20}}>
+        <div style={{color:"#fff",fontSize:14,fontWeight:600,marginBottom:6}}>We want to hear from you! 🍿</div>
+        <div style={{color:"rgba(255,255,255,0.5)",fontSize:13,lineHeight:1.6}}>
+          Got an idea for a new feature? Found a bug? Something not working the way you expected? Drop it here and we'll review it. Every piece of feedback helps make DuoFlix better.
+        </div>
+      </div>
+      <div style={{marginBottom:16}}>
+        <div style={{...S.muted,fontSize:11,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Your Feedback</div>
+        <textarea
+          value={msg}
+          onChange={e=>setMsg(e.target.value)}
+          placeholder="Tell us what's on your mind..."
+          rows={7}
+          style={{...S.input,resize:"vertical",minHeight:140,fontFamily:"inherit",lineHeight:1.6}}
+        />
+        <div style={{...S.muted,fontSize:11,textAlign:"right",marginTop:4}}>{msg.length} characters</div>
+      </div>
+      <button
+        onClick={handleSubmit}
+        disabled={!msg.trim()||status==="sending"}
+        style={{...S.btn,width:"100%",
+          opacity:msg.trim()&&status!=="sending"?1:0.4,
+          background:status==="sent"?"linear-gradient(135deg,#22c55e,#16a34a)":"linear-gradient(135deg,#f97316,#ec4899)"
+        }}>
+        {status==="sending"?"Sending...":status==="sent"?"✓ Feedback Sent!":status==="error"?"Failed — try again":"Send Feedback"}
+      </button>
+      {status==="error"&&<div style={{color:"#ef4444",fontSize:12,textAlign:"center",marginTop:8}}>Something went wrong. Please try again.</div>}
+    </div></div>
+  );
+}
+
+// ─── MY MOVIES SCREEN ─────────────────────────────────────────────────────────
+function MyMoviesScreen({ authUser, catalog, onBack }) {
+  const [likedTitles, setLikedTitles] = useState([]);
+  const [watched, setWatched]         = useState(new Set());
+  const [loading, setLoading]         = useState(true);
+  const [filter, setFilter]           = useState("all");
+
+  useEffect(() => {
+    async function load() {
+      const { data: swipes } = await supabase
+        .from("swipes").select("title_id")
+        .eq("user_id", authUser.id).eq("direction", "like");
+      const { data: watchedData } = await supabase
+        .from("user_watched").select("title_id")
+        .eq("user_id", authUser.id);
+      const watchedSet = new Set((watchedData||[]).map(w => w.title_id));
+      const likedIds   = new Set((swipes||[]).map(s => s.title_id));
+      const titleMap   = Object.fromEntries(catalog.map(t => [String(t.id), t]));
+      const titles     = [...likedIds].map(id => titleMap[String(id)]).filter(Boolean);
+      titles.sort((a,b) => a.title.localeCompare(b.title));
+      setLikedTitles(titles);
+      setWatched(watchedSet);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const toggleWatched = async (titleId) => {
+    const isWatched = watched.has(titleId);
+    const updated = new Set(watched);
+    if (isWatched) {
+      updated.delete(titleId);
+      await supabase.from("user_watched").delete().eq("user_id", authUser.id).eq("title_id", titleId);
+    } else {
+      updated.add(titleId);
+      await supabase.from("user_watched").upsert({ user_id: authUser.id, title_id: titleId });
+    }
+    setWatched(updated);
+  };
+
+  const filtered = filter==="unwatched" ? likedTitles.filter(t=>!watched.has(t.id))
+                 : filter==="watched"   ? likedTitles.filter(t=> watched.has(t.id))
+                 : likedTitles;
+
+  return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={onBack}>←</button>
+        <div style={S.logo}>My Movies</div>
+        <div style={{width:40}}/>
+      </header>
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {[["all","All"],["unwatched","Unwatched"],["watched","Watched ✅"]].map(([val,label])=>(
+          <button key={val} onClick={()=>setFilter(val)} style={{
+            flex:1,padding:"7px 4px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,
+            background:filter===val?"linear-gradient(135deg,#f97316,#ec4899)":"rgba(255,255,255,0.07)",
+            color:filter===val?"#fff":"rgba(255,255,255,0.5)"
+          }}>{label}</button>
+        ))}
+      </div>
+      {loading ? (
+        <div style={S.empty}><div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading your movies...</div></div>
+      ) : likedTitles.length===0 ? (
+        <div style={S.empty}><div style={{fontSize:48}}>🎬</div><p>No liked movies yet — start swiping to build your list!</p></div>
+      ) : filtered.length===0 ? (
+        <div style={S.empty}><div style={{fontSize:48}}>🍿</div><p>Nothing in this category yet.</p></div>
+      ) : (
+        <div style={{overflowY:"auto",paddingBottom:20}}>
+          <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>
+            {filtered.length} title{filtered.length!==1?"s":""}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            {filtered.map(t=>(
+              <div key={t.id} style={{...S.matchCard,opacity:watched.has(t.id)?0.55:1}}>
+                <div style={{position:"relative"}}>
+                  {t.poster
+                    ? <img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>
+                    : <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>
+                  }
+                  {watched.has(t.id)&&(
+                    <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.45)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>✅</div>
+                  )}
+                </div>
+                <div style={{padding:"8px 8px 10px"}}>
+                  <div style={{color:"#fff",fontWeight:600,fontSize:11,textAlign:"center",marginBottom:5,lineHeight:1.3}}>{t.title}</div>
+                  <div style={{display:"flex",gap:3,flexWrap:"wrap",justifyContent:"center",marginBottom:6}}>
+                    {(t.services||[]).map(s=>(
+                      <span key={s} style={{background:SERVICE_COLORS[s]||"#444",borderRadius:3,padding:"1px 5px",fontSize:9,color:"#fff"}}>{s}</span>
+                    ))}
+                  </div>
+                  <button onClick={()=>toggleWatched(t.id)} style={{
+                    width:"100%",borderRadius:6,fontSize:11,fontWeight:600,padding:"5px",cursor:"pointer",
+                    background:watched.has(t.id)?"rgba(255,255,255,0.06)":"rgba(34,197,94,0.12)",
+                    color:watched.has(t.id)?"rgba(255,255,255,0.35)":"#22c55e",
+                    border:watched.has(t.id)?"1px solid rgba(255,255,255,0.08)":"1px solid rgba(34,197,94,0.3)"
+                  }}>
+                    {watched.has(t.id)?"↩ Unmark":"✓ Mark Watched"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div></div>
+  );
+}
+
 // ─── STATS SCREEN ────────────────────────────────────────────────────────────
-function StatsScreen({ authUser, profile, rooms, onBack }) {
+function StatsScreen({ authUser, profile, rooms, catalog, onBack, onMyMovies }) {
   const [swipeStats, setSwipeStats] = useState(null);
   const [loading, setLoading]       = useState(true);
 
@@ -1727,6 +1952,9 @@ function StatsScreen({ authUser, profile, rooms, onBack }) {
         <div style={S.logo}>My Stats</div>
         <div style={{width:40}}/>
       </header>
+      <button onClick={onMyMovies} style={{...S.btn,width:"100%",marginBottom:16,background:"linear-gradient(135deg,rgba(249,115,22,0.15),rgba(236,72,153,0.15))",border:"1px solid rgba(249,115,22,0.3)",fontSize:14}}>
+        🎬 My Movies →
+      </button>
 
       {loading ? (
         <div style={S.empty}>
