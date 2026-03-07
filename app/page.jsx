@@ -5,7 +5,6 @@ import { supabase } from "./supabaseClient";
 
 // ─── TMDB CONFIG ──────────────────────────────────────────────────────────────
 const IMG_W500  = "https://image.tmdb.org/t/p/w500";
-const IMG_W300  = "https://image.tmdb.org/t/p/w300";
 
 const GENRE_MAP = {
   28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",
@@ -14,10 +13,6 @@ const GENRE_MAP = {
   53:"Thriller",10752:"War",37:"Western",10765:"Sci-Fi & Fantasy",
   10759:"Action & Adventure",10762:"Kids",10764:"Reality",
 };
-const PROVIDER_MAP = {
-  8:"Netflix",337:"Disney+",350:"Apple TV+",1899:"Max",
-  15:"Hulu",9:"Prime Video",386:"Peacock",531:"Paramount+",283:"Crunchyroll",
-};
 const ALL_SERVICES = ["Netflix","Disney+","Apple TV+","Max","Prime Video","Hulu","Peacock","Paramount+","Crunchyroll"];
 const SERVICE_COLORS = {
   "Netflix":"#E50914","Disney+":"#113CCF","Apple TV+":"#4a4a4a",
@@ -25,109 +20,6 @@ const SERVICE_COLORS = {
   "Peacock":"#F037A5","Paramount+":"#0064FF","Crunchyroll":"#F47521",
 };
 // No mock users — real users loaded from Supabase
-
-const FALLBACK_CATALOG = [
-  {id:"m872585",tmdbId:872585,type:"movie",title:"Oppenheimer",year:"2023",genres:["Drama","History"],poster:"https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",backdrop:"https://image.tmdb.org/t/p/w780/rLb2cwF3Pazuxaj0sRXQ037tGI1.jpg",overview:"The story of J. Robert Oppenheimer and his role in the development of the atomic bomb.",rating:"8.1",services:["Netflix"]},
-  {id:"m346698",tmdbId:346698,type:"movie",title:"Barbie",year:"2023",genres:["Comedy","Fantasy"],poster:"https://image.tmdb.org/t/p/w500/iuFNMS8vlbzFAqarika1a1Sb1OC.jpg",backdrop:"https://image.tmdb.org/t/p/w780/nHf61UzkfFno5X1ofIhugCPus2R.jpg",overview:"Barbie and Ken are having the time of their lives in the colorful world of Barbie Land.",rating:"7.0",services:["Netflix","Max"]},
-  {id:"m693134",tmdbId:693134,type:"movie",title:"Dune: Part Two",year:"2024",genres:["Sci-Fi","Action"],poster:"https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",backdrop:"https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg",overview:"Follow the mythic journey of Paul Atreides as he unites with Chani and the Fremen.",rating:"8.5",services:["Max"]},
-  {id:"m792307",tmdbId:792307,type:"movie",title:"Poor Things",year:"2023",genres:["Drama","Fantasy"],poster:"https://image.tmdb.org/t/p/w500/kCGlIMHnOm8JPXs0OSwzUzPJAFf.jpg",backdrop:"https://image.tmdb.org/t/p/w780/bQXAqRx2Fgc46uCVWgoPz5L5Dtr.jpg",overview:"The incredible tale of Bella Baxter, a young woman brought back to life by the brilliant Dr. Baxter.",rating:"8.0",services:["Disney+"]},
-  {id:"t136315",tmdbId:136315,type:"tv",title:"The Bear",year:"2022",genres:["Drama","Comedy"],poster:"https://image.tmdb.org/t/p/w500/sHFlbKS3WLqMnp9t2ghADIJFnuQ.jpg",backdrop:"https://image.tmdb.org/t/p/w780/qJeU7KM4nT2C1WpOrwPcSDGFUWE.jpg",overview:"A young chef from the fine dining world returns to Chicago to run his family sandwich shop.",rating:"8.6",services:["Disney+","Hulu"]},
-  {id:"t79680",tmdbId:79680,type:"tv",title:"Succession",year:"2018",genres:["Drama","Thriller"],poster:"https://image.tmdb.org/t/p/w500/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",backdrop:"https://image.tmdb.org/t/p/w780/kqPhPDekMFAvFCYRJAqWkxgqtKQ.jpg",overview:"The Roy family controls one of the biggest media and entertainment conglomerates in the world.",rating:"8.8",services:["Max"]},
-  {id:"t100088",tmdbId:100088,type:"tv",title:"The Last of Us",year:"2023",genres:["Drama","Action"],poster:"https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",backdrop:"https://image.tmdb.org/t/p/w780/uDgy6hyPd82kOHh6I95iiG9BGDB.jpg",overview:"Joel is hired to smuggle Ellie out of an oppressive quarantine zone.",rating:"8.8",services:["Max"]},
-  {id:"m677179",tmdbId:677179,type:"movie",title:"Killers of the Flower Moon",year:"2023",genres:["Crime","History"],poster:"https://image.tmdb.org/t/p/w500/dB6jVMOgAFiH0tPlUJC9b8gWEMc.jpg",backdrop:"https://image.tmdb.org/t/p/w780/1X7vow16X7CnCoexXh4H4F2yDJv.jpg",overview:"Members of the Osage tribe are murdered under mysterious circumstances in 1920s Oklahoma.",rating:"7.7",services:["Apple TV+"]},
-  {id:"t99966",tmdbId:99966,type:"tv",title:"Severance",year:"2022",genres:["Thriller","Sci-Fi"],poster:"https://image.tmdb.org/t/p/w500/lT8mz3LpI7Lv5xrpQT8ib2OOQhJ.jpg",backdrop:"https://image.tmdb.org/t/p/w780/3GfDNQBwHbGkTnPVNVB4D2cL1WT.jpg",overview:"Office workers whose memories have been surgically divided between work and personal lives.",rating:"8.7",services:["Apple TV+"]},
-  {id:"t97546",tmdbId:97546,type:"tv",title:"Ted Lasso",year:"2020",genres:["Comedy","Drama"],poster:"https://image.tmdb.org/t/p/w500/5fhZdwP1DVJ0FyVH6vrFdHwpXIn.jpg",backdrop:"https://image.tmdb.org/t/p/w780/gBHarBFNryHJbCXLHOQ7JVGfyRO.jpg",overview:"An American college football coach is hired to manage an English soccer team.",rating:"8.8",services:["Apple TV+"]},
-  {id:"t119051",tmdbId:119051,type:"tv",title:"Wednesday",year:"2022",genres:["Comedy","Horror"],poster:"https://image.tmdb.org/t/p/w500/9PFonBhy4cQy7Jz20NpMygczOkv.jpg",backdrop:"https://image.tmdb.org/t/p/w780/iHSwvRVsRyxpX7FE7GbviaDvgGZ.jpg",overview:"Wednesday Addams investigates a murder spree while at Nevermore Academy.",rating:"8.1",services:["Netflix"]},
-  {id:"t93405",tmdbId:93405,type:"tv",title:"Squid Game",year:"2021",genres:["Thriller","Drama"],poster:"https://image.tmdb.org/t/p/w500/dDlEmu3EZ0Pgg93K2SVNLCjCSvE.jpg",backdrop:"https://image.tmdb.org/t/p/w780/oaGvjB0DvdhXhOAuADfHb261ZHa.jpg",overview:"Cash-strapped players compete in children's games for a massive prize.",rating:"8.0",services:["Netflix"]},
-  {id:"t66732",tmdbId:66732,type:"tv",title:"Stranger Things",year:"2016",genres:["Sci-Fi","Horror"],poster:"https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",backdrop:"https://image.tmdb.org/t/p/w780/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",overview:"A young boy vanishes and a small town uncovers a mystery involving secret experiments.",rating:"8.7",services:["Netflix"]},
-  {id:"t94997",tmdbId:94997,type:"tv",title:"House of the Dragon",year:"2022",genres:["Fantasy","Drama"],poster:"https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg",backdrop:"https://image.tmdb.org/t/p/w780/etj8E2o0Bud0HkONVQPjyCkIvpv.jpg",overview:"The story of House Targaryen set 200 years before the events of Game of Thrones.",rating:"8.4",services:["Max"]},
-  {id:"t82856",tmdbId:82856,type:"tv",title:"The Mandalorian",year:"2019",genres:["Sci-Fi","Action"],poster:"https://image.tmdb.org/t/p/w500/sWgBv7LV2PRoQgkxwlibdGXKz1S.jpg",backdrop:"https://image.tmdb.org/t/p/w780/9ijMGlJKqcslswWUzTEwTy2By9w.jpg",overview:"A lone gunfighter makes his way through the lawless galaxy after the fall of the Empire.",rating:"8.6",services:["Disney+"]},
-  {id:"t76479",tmdbId:76479,type:"tv",title:"The Boys",year:"2019",genres:["Action","Comedy"],poster:"https://image.tmdb.org/t/p/w500/stTEycfG9928HYGEISBFaG1ngjM.jpg",backdrop:"https://image.tmdb.org/t/p/w780/mGVrXeIjyecj6TKmwPVpHlscEmw.jpg",overview:"Vigilantes set out to take down corrupt superheroes who abuse their powers.",rating:"8.7",services:["Prime Video"]},
-  {id:"t116954",tmdbId:116954,type:"tv",title:"Fallout",year:"2024",genres:["Sci-Fi","Action"],poster:"https://image.tmdb.org/t/p/w500/AnsSKR4fvKGGqT79oAJihhEi1tq.jpg",backdrop:"https://image.tmdb.org/t/p/w780/oizNPTT8BZHToRRoAWFBuHKKRDA.jpg",overview:"Survivors emerge from underground vaults in a post-nuclear-war future.",rating:"8.5",services:["Prime Video"]},
-  {id:"m545611",tmdbId:545611,type:"movie",title:"Everything Everywhere All at Once",year:"2022",genres:["Sci-Fi","Comedy"],poster:"https://image.tmdb.org/t/p/w500/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg",backdrop:"https://image.tmdb.org/t/p/w780/ss0Os3uWJfQAENILHZUdX8Tt1OC.jpg",overview:"An aging Chinese immigrant is swept up in an insane adventure in which she alone can save the world.",rating:"7.9",services:["Netflix"]},
-  {id:"m795306",tmdbId:795306,type:"movie",title:"Saltburn",year:"2023",genres:["Drama","Thriller"],poster:"https://image.tmdb.org/t/p/w500/qjhahNLSZ705B5JP92YMEYPocPz.jpg",backdrop:"https://image.tmdb.org/t/p/w780/fKFGLvTHRNOCT1e2bEDSAMrr9oQ.jpg",overview:"A student at Oxford is drawn into the world of a charming aristocratic classmate.",rating:"7.3",services:["Prime Video"]},
-  {id:"m940721",tmdbId:940721,type:"movie",title:"Godzilla Minus One",year:"2023",genres:["Action","Sci-Fi"],poster:"https://image.tmdb.org/t/p/w500/hkxxMIGaiCTmrEArK7J56iorjQi.jpg",backdrop:"https://image.tmdb.org/t/p/w780/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg",overview:"Postwar Japan is at its lowest when a new crisis emerges in the form of a giant monster.",rating:"7.9",services:["Netflix"]},
-  {id:"m361743",tmdbId:361743,type:"movie",title:"Top Gun: Maverick",year:"2022",genres:["Action","Drama"],poster:"https://image.tmdb.org/t/p/w500/62HCnUTHOSF3AdrB9GH0Mp5t1K6.jpg",backdrop:"https://image.tmdb.org/t/p/w780/AkB4w9DyBs4Msc8DMaFGPYYp8RT.jpg",overview:"After 30 years, Maverick is called to train a group of Top Gun graduates for a special mission.",rating:"8.3",services:["Netflix","Paramount+"]},
-  {id:"m447365",tmdbId:447365,type:"movie",title:"Guardians of the Galaxy Vol. 3",year:"2023",genres:["Action","Comedy"],poster:"https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctfOSN1Ydgii51I3.jpg",backdrop:"https://image.tmdb.org/t/p/w780/5YZbUmjbMa3ClvSW1Wj3D6XGkVA.jpg",overview:"The Guardians set out on a mission to protect one of their own.",rating:"8.0",services:["Disney+"]},
-  {id:"m315162",tmdbId:315162,type:"movie",title:"Puss in Boots: The Last Wish",year:"2022",genres:["Animation","Comedy"],poster:"https://image.tmdb.org/t/p/w500/kuf6dutpsT0vSVehic3EZIqkOBt.jpg",backdrop:"https://image.tmdb.org/t/p/w780/1hLULrDOGDnIKyDxaLCkiHEbKFE.jpg",overview:"Puss in Boots discovers he has burned through eight of his nine lives.",rating:"8.3",services:["Netflix"]},
-  {id:"t105971",tmdbId:105971,type:"tv",title:"The White Lotus",year:"2021",genres:["Drama","Mystery"],poster:"https://image.tmdb.org/t/p/w500/lO4nFZ5zXRrEJLrgjfxFf83vTF1.jpg",backdrop:"https://image.tmdb.org/t/p/w780/q0gFHHQgXKo5G8UFbHBKUGQmMo7.jpg",overview:"A social satire set at an exclusive Hawaiian resort over the course of a week.",rating:"7.9",services:["Max"]},
-  {id:"t114461",tmdbId:114461,type:"tv",title:"Hacks",year:"2021",genres:["Comedy","Drama"],poster:"https://image.tmdb.org/t/p/w500/3O4TcHjGqDIGMPcLhFMSFgGM2IV.jpg",backdrop:"https://image.tmdb.org/t/p/w780/eJ4O6RFlRwf8HEatLhDHjDlAOhN.jpg",overview:"An aging comedian and a young comedy writer form an unlikely bond.",rating:"8.2",services:["Max"]},
-];
-
-// ─── TMDB CATALOG FETCHER ────────────────────────────────────────────────────
-async function tryFetchLiveCatalog(onProgress) {
-  try {
-    const test = await fetch(`/api/tmdb?path=/trending/movie/week&language=en-US&region=US&page=1`);
-    if (!test.ok) return null;
-    const testData = await test.json();
-    if (!testData.results?.length) return null;
-
-    const all = [], seen = new Set();
-
-    for (let p = 1; p <= 50; p++) {
-      try {
-        const r = await fetch(`/api/tmdb?path=/trending/movie/week&language=en-US&region=US&page=${p}`);
-        const d = await r.json();
-        if (!d.results?.length) break;
-        for (const m of (d.results||[])) {
-          if (seen.has(`m${m.id}`)) continue;
-          seen.add(`m${m.id}`);
-          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W300+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",popularity:m.popularity||0,language:m.original_language||"en",services:[] });
-        }
-        if (p%5===0) onProgress(Math.round((p/50)*50));
-      } catch(e){}
-    }
-    for (let p = 1; p <= 10; p++) {
-      try {
-        const r = await fetch(`/api/tmdb?path=/trending/tv/week&language=en-US&region=US&page=${p}`);
-        const d = await r.json();
-        if (!d.results?.length) break;
-        for (const t of (d.results||[])) {
-          if (seen.has(`t${t.id}`)) continue;
-          seen.add(`t${t.id}`);
-          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W300+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",popularity:t.popularity||0,language:t.original_language||"en",services:[] });
-        }
-      } catch(e){}
-    }
-
-    // Keep only English language titles
-    const titles = all.filter(t => t.language === "en");
-
-    onProgress(65);
-    const BATCH_SIZE = 40;
-    const delay = (ms) => new Promise(res => setTimeout(res, ms));
-
-    for (let i = 0; i < titles.length; i += BATCH_SIZE) {
-      const batch = titles.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (t) => {
-        try {
-          const path = t.type === "movie"
-            ? `/movie/${t.tmdbId}/watch/providers`
-            : `/tv/${t.tmdbId}/watch/providers`;
-          const r = await fetch(`/api/tmdb?path=${path}`);
-          if (!r.ok) return;
-          const d = await r.json();
-          t.services = (d.results?.US?.flatrate||[])
-            .map(p=>PROVIDER_MAP[p.provider_id])
-            .filter(Boolean)
-            .filter(s=>ALL_SERVICES.includes(s));
-        } catch(e){}
-      }));
-      if (i + BATCH_SIZE < titles.length) await delay(250);
-      onProgress(Math.min(95, 65 + Math.round(((i + BATCH_SIZE) / titles.length) * 30)));
-    }
-
-    // Assign a fallback service to titles with no provider data
-    const cycle = ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+","Crunchyroll"];
-    let ci = 0;
-    for (const t of titles) {
-      if (!t.services.length) { t.services=[cycle[ci%cycle.length]]; ci++; }
-    }
-
-    onProgress(100);
-    return titles;
-  } catch(e) { return null; }
-}
 
 // ─── SUPABASE HELPERS ─────────────────────────────────────────────────────────
 async function getProfile(userId) {
@@ -149,7 +41,6 @@ async function saveRoomToDB(room, userId) {
     partner_avatar: room.partner.avatar || "😊",
     partner_services: room.partner.services,
     shared_services: room.sharedServices,
-    queue_ids: room.queue.slice(0,200).map((t)=>t.id),
     content_type: room.contentType || "both",
     genres: room.genres || [],
     watched_ids: room.watchedIds || [],
@@ -172,10 +63,8 @@ async function loadSwipesForRoom(roomId) {
   } catch(e) { return {}; }
 }
 
-async function loadRoomsFromDB(userId, catalog) {
+async function loadRoomsFromDB(userId) {
   try {
-    const map = Object.fromEntries(catalog.map((t)=>[t.id,t]));
-
     // Load rooms where user is owner OR partner
     const { data: owned } = await supabase.from("rooms").select("*").eq("owner_id", userId);
     const { data: partnered } = await supabase.from("rooms").select("*").eq("partner_id", userId);
@@ -208,14 +97,14 @@ async function loadRoomsFromDB(userId, catalog) {
       ownerProfiles = Object.fromEntries((profiles||[]).map(p => [p.id, p]));
     }
 
-    const baseRooms = allRooms.map((r) => {
+    return allRooms.map((r) => {
       const swipesByUser = swipesByRoom[r.id] || {};
       const mySwipes = swipesByUser[userId] || {};
       const partnerId = r.owner_id === userId ? r.partner_id : r.owner_id;
       const partnerSwipes = swipesByUser[partnerId] || {};
 
-      const queue = (r.queue_ids||[]).map(id=>map[id]).filter(Boolean);
-      const matches = queue.filter(t => mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like");
+      const matchIds = Object.keys(mySwipes)
+        .filter(id => mySwipes[id]==="like" && partnerSwipes[id]==="like");
 
       let partnerInfo;
       if (r.owner_id === userId) {
@@ -229,32 +118,14 @@ async function loadRoomsFromDB(userId, catalog) {
         id: r.id,
         partner: partnerInfo,
         sharedServices: r.shared_services||[],
-        queue,
         userSwipes: mySwipes,
         partnerSwipes,
-        matches,
+        matchIds,
         contentType: r.content_type || "both",
         genres: r.genres || [],
         watchedIds: r.watched_ids || [],
       };
     });
-
-    // Auto-expand queues that are too small (e.g. created during a catalog outage)
-    const rooms = await Promise.all(baseRooms.map(async (room) => {
-      if (room.queue.length >= 50) return room;
-      const shared = room.sharedServices;
-      let expanded = catalog.filter(t => !shared.length || t.services.some(s => shared.includes(s)));
-      if (expanded.length < 20) expanded = [...catalog];
-      expanded.sort((a,b) => (b.popularity||0) - (a.popularity||0));
-      const existingIds = new Set(room.queue.map(t => t.id));
-      const newQueue = [...room.queue, ...expanded.filter(t => !existingIds.has(t.id))].slice(0, 200);
-      // Save expanded queue back to DB (fire-and-forget)
-      supabase.from("rooms").update({ queue_ids: newQueue.map(t => t.id) }).eq("id", room.id);
-      const newMatches = newQueue.filter(t => room.userSwipes[t.id]==="like" && room.partnerSwipes[t.id]==="like");
-      return { ...room, queue: newQueue, matches: newMatches };
-    }));
-
-    return rooms;
   } catch(e) {
     console.error("loadRoomsFromDB error:", e);
     return [];
@@ -296,10 +167,6 @@ export default function DuoFlix() {
   const [profile, setProfile]     = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const [rooms, setRooms]         = useState([]);
-  const [catalog, setCatalog]     = useState([]);
-  const [loadProgress, setLoadProgress] = useState(0);
-  const [catalogReady, setCatalogReady] = useState(false);
-  const [usingFallback, setUsingFallback] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   // 1. Check Supabase session on mount
@@ -315,38 +182,7 @@ export default function DuoFlix() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 2. Load catalog — use localStorage cache if fresh (6h TTL), otherwise fetch
-  useEffect(() => {
-    const CACHE_KEY = "duoflix_catalog_v1";
-    const CACHE_TTL = 6 * 60 * 60 * 1000;
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_TTL && data?.length) {
-          setCatalog(data);
-          setLoadProgress(100);
-          setCatalogReady(true);
-          return;
-        }
-      }
-    } catch(e) {}
-
-    tryFetchLiveCatalog(setLoadProgress).then(live => {
-      const catalog = live?.length ? live : FALLBACK_CATALOG;
-      setCatalog(catalog);
-      setUsingFallback(!live?.length);
-      setLoadProgress(100);
-      setCatalogReady(true);
-      if (live?.length) {
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ data: live, timestamp: Date.now() }));
-        } catch(e) {}
-      }
-    });
-  }, []);
-
-  // 3. Once we have auth user, load their profile
+  // 2. Once we have auth user, load their profile
   useEffect(() => {
     if (!authUser || screen !== "loadingProfile") return;
     getProfile(authUser.id).then(p => {
@@ -360,10 +196,10 @@ export default function DuoFlix() {
     });
   }, [authUser, screen]);
 
-  // 4. Load rooms once catalog + profile ready
+  // 3. Load rooms once profile ready
   useEffect(() => {
-    if (!authUser || !catalogReady || !profile) return;
-    loadRoomsFromDB(authUser.id, catalog).then(saved => {
+    if (!authUser || !profile) return;
+    loadRoomsFromDB(authUser.id).then(saved => {
       setRooms(saved || []);
     });
     // Load notifications
@@ -373,7 +209,7 @@ export default function DuoFlix() {
       loadNotifications(authUser.id).then(setNotifications);
     }, 30000);
     return () => clearInterval(interval);
-  }, [authUser, catalogReady, profile]);
+  }, [authUser, profile]);
 
   const persistRoom = async (room, swipedTitleId, swipeDir) => {
     if (!authUser) return;
@@ -400,7 +236,6 @@ export default function DuoFlix() {
   if (screen === "setup" && !profile) return (
     <ProfileSetup
       email={authUser?.email}
-      catalogReady={catalogReady} loadProgress={loadProgress} usingFallback={usingFallback}
       onComplete={async (name, services) => {
         await upsertProfile(authUser.id, name, services);
         setProfile({ name, services });
@@ -424,7 +259,6 @@ export default function DuoFlix() {
       authUser={authUser}
       profile={profile}
       rooms={rooms}
-      catalog={catalog}
       onBack={()=>setScreen("home")}
       onMyMovies={()=>setScreen("mymovies")}
     />
@@ -432,7 +266,6 @@ export default function DuoFlix() {
   if (screen === "mymovies") return (
     <MyMoviesScreen
       authUser={authUser}
-      catalog={catalog}
       onBack={()=>setScreen("stats")}
     />
   );
@@ -449,7 +282,6 @@ export default function DuoFlix() {
   if (screen === "tutorial") return (
     <TutorialScreen
       profile={profile}
-      catalog={catalog}
       onComplete={async () => {
         await supabase.from("profiles").update({ tutorial_complete: true }).eq("id", authUser.id);
         setProfile(p => ({...p, tutorial_complete: true}));
@@ -458,7 +290,7 @@ export default function DuoFlix() {
     />
   );
   if (screen === "search") return (
-    <FindPartner currentUser={{ id:authUser.id, ...profile }} catalog={catalog}
+    <FindPartner currentUser={{ id:authUser.id, ...profile }}
       rooms={rooms} setRooms={setRooms}
       onBack={()=>setScreen("home")}
       onJoinRoom={(r)=>{ setActiveRoom(r); setScreen("swipe"); }}
@@ -508,10 +340,11 @@ export default function DuoFlix() {
     const mySwipes = swipesByUser[authUser.id] || {};
     const partnerId = r.partner?.id;
     const partnerSwipes = swipesByUser[partnerId] || {};
-    const matches = (r.queue||[]).filter(t => mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like");
+    const matchIds = Object.keys(mySwipes)
+      .filter(id => mySwipes[id]==="like" && partnerSwipes[id]==="like");
     // Also fetch latest filters from DB
     const { data: freshRoom } = await supabase.from("rooms").select("content_type,genres").eq("id", r.id).single();
-    setActiveRoom({...r, userSwipes: mySwipes, partnerSwipes, matches, contentType: freshRoom?.content_type||r.contentType||"both", genres: freshRoom?.genres||r.genres||[]});
+    setActiveRoom({...r, userSwipes: mySwipes, partnerSwipes, matchIds, contentType: freshRoom?.content_type||r.contentType||"both", genres: freshRoom?.genres||r.genres||[]});
     setScreen("swipe");
   }}
       onSignOut={handleSignOut}
@@ -595,7 +428,7 @@ function AuthScreen({ onAuth }) {
 }
 
 // ─── PROFILE SETUP (first time only) ─────────────────────────────────────────
-function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComplete }) {
+function ProfileSetup({ email, onComplete }) {
   const [step, setStep]     = useState(0);
   const [name, setName]     = useState("");
   const [services, setServices] = useState([]);
@@ -607,19 +440,7 @@ function ProfileSetup({ email, catalogReady, loadProgress, usingFallback, onComp
         <div style={S.bigLogo}>DuoFlix</div>
         <div style={{color:"#fff",fontSize:16,fontWeight:600,marginBottom:4}}>Welcome! Let's set up your profile</div>
         <p style={{...S.muted,marginBottom:20}}>{email}</p>
-        <div style={{width:"100%",marginBottom:8}}>
-          <span style={{...S.muted,fontSize:11}}>
-            {catalogReady
-              ? usingFallback ? `✅ ${FALLBACK_CATALOG.length} curated titles ready` : "✅ 1,000+ trending titles loaded"
-              : `⏳ Loading catalog... ${loadProgress}%`}
-          </span>
-          <div style={{height:3,background:"rgba(255,255,255,0.08)",borderRadius:4,marginTop:6}}>
-            <div style={{height:"100%",borderRadius:4,background:"linear-gradient(90deg,#f97316,#ec4899)",width:`${loadProgress}%`,transition:"width 0.4s"}}/>
-          </div>
-        </div>
-        <button style={{...S.btn,marginTop:12,opacity:catalogReady?1:0.4}} onClick={()=>catalogReady&&setStep(1)}>
-          {catalogReady?"Get Started →":"Loading..."}
-        </button>
+        <button style={{...S.btn,marginTop:12}} onClick={()=>setStep(1)}>Get Started →</button>
       </>}
       {step===1&&<>
         <div style={S.badge}>1 / 2</div>
@@ -733,8 +554,6 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
       {rooms.length===0
         ?<div style={S.empty}><div style={{fontSize:52}}>🎬</div><p>No rooms yet — find a partner to start swiping!</p></div>
         :rooms.map((r)=>{
-          const swiped=(r.queue||[]).filter(t=>r.userSwipes?.[t.id]).length;
-          const pct=Math.round((swiped/Math.max(r.queue?.length||1,1))*100);
           const isSelected = selected.has(r.id);
           return(
             <div key={r.id}
@@ -753,16 +572,10 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
                     {isSelected?"✓":""}
                   </div>
                 )}
-                {r.matches?.[0]?.poster
-                  ?<img src={r.matches[0].poster} style={{width:40,height:56,objectFit:"cover",borderRadius:6}}/>
-                  :<div style={{width:40,height:56,background:"rgba(255,255,255,0.07)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
-                }
+                <div style={{width:40,height:56,background:"rgba(255,255,255,0.07)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
                 <div>
                   <div style={{color:"#fff",fontWeight:600}}>{r.partner.name}</div>
-                  <div style={S.muted}>❤️ {r.matches?.length||0} matches · {pct}% swiped</div>
-                  <div style={{marginTop:4,height:2,width:110,background:"rgba(255,255,255,0.08)",borderRadius:2}}>
-                    <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#f97316,#ec4899)",borderRadius:2}}/>
-                  </div>
+                  <div style={S.muted}>❤️ {r.matchIds?.length||0} matches</div>
                 </div>
               </div>
               {!editMode&&<div style={{color:"rgba(255,255,255,0.25)",fontSize:20}}>→</div>}
@@ -802,7 +615,7 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
 }
 
 // ─── FIND PARTNER ─────────────────────────────────────────────────────────────
-function FindPartner({ currentUser, catalog, setRooms, onBack, onJoinRoom, persistRoom }) {
+function FindPartner({ currentUser, setRooms, onBack, onJoinRoom, persistRoom }) {
   const [query, setQuery] = useState("");
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -824,14 +637,10 @@ function FindPartner({ currentUser, catalog, setRooms, onBack, onJoinRoom, persi
 
   const createRoom = (partner) => {
     const shared = (currentUser.services||[]).filter(s=>(partner.services||[]).includes(s));
-    let titles = catalog.filter((t)=>t.services.some(s=>shared.includes(s)));
-    if (titles.length<20) titles=[...catalog];
-    const room={
-      id:`room-${Date.now()}`, partner, sharedServices:shared,
-      queue:[...titles].sort((a,b)=>(b.popularity||0)-(a.popularity||0)),
-      userSwipes:{},
-      partnerSwipes:{},
-      matches:[],
+    const room = {
+      id: `room-${Date.now()}`, partner, sharedServices: shared,
+      userSwipes: {}, partnerSwipes: {}, matchIds: [], watchedIds: [],
+      contentType: "both", genres: [],
     };
     setRooms(p=>[...p,room]);
     persistRoom(room);
@@ -891,8 +700,38 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const [contentType, setContentType] = useState(room.contentType||"both");
   const [selectedGenres, setSelectedGenres] = useState(room.genres||[]);
   const [filterSaving, setFilterSaving] = useState(false);
+  const [titles, setTitles]     = useState([]);
+  const [catalogPage, setCatalogPage] = useState(0);
+  const [exhausted, setExhausted] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const dragStart = useRef(null);
   const exitingRef = useRef(false);
+  const loadingRef = useRef(false);
+
+  const PAGE_SIZE = 50;
+
+  const loadMore = async (currentPage) => {
+    if (loadingRef.current || exhausted) return;
+    loadingRef.current = true;
+    setLoadingMore(true);
+    let query = supabase.from("catalog")
+      .select("id,type,title,year,genres,poster,backdrop,overview,rating,services,popularity")
+      .order("popularity", { ascending: false })
+      .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+    if (room.sharedServices?.length > 0)
+      query = query.overlaps("services", room.sharedServices);
+    if (room.contentType === "movie") query = query.eq("type", "movie");
+    if (room.contentType === "tv") query = query.eq("type", "tv");
+    const { data } = await query;
+    if (!data || data.length < PAGE_SIZE) setExhausted(true);
+    setTitles(prev => [...prev, ...(data || [])]);
+    setCatalogPage(currentPage + 1);
+    loadingRef.current = false;
+    setLoadingMore(false);
+  };
+
+  // Load first page on mount
+  useEffect(() => { loadMore(0); }, []);
 
   const saveFilters = async (newContentType, newGenres) => {
     setFilterSaving(true);
@@ -904,7 +743,13 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 
   const handleContentType = (val) => {
     setContentType(val);
+    room.contentType = val;
     saveFilters(val, selectedGenres);
+    // Reset catalog for new content type
+    setTitles([]);
+    setCatalogPage(0);
+    setExhausted(false);
+    loadingRef.current = false;
   };
 
   const toggleGenre = (g) => {
@@ -918,10 +763,15 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const clearFilters = () => {
     setSelectedGenres([]);
     setContentType("both");
+    room.contentType = "both";
     saveFilters("both", []);
+    setTitles([]);
+    setCatalogPage(0);
+    setExhausted(false);
+    loadingRef.current = false;
   };
 
-  const fullQueue = room.queue||[];
+  const fullQueue = titles;
 
   // Apply filters to queue — memoized to avoid recomputing on every drag event
   const queue = useMemo(() => fullQueue.filter(t => {
@@ -933,9 +783,16 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 
   const filteredIdx = useMemo(() => queue.findIndex(t=>!swipes[t.id]), [queue, swipes]);
   const current  = filteredIdx >= 0 ? queue[filteredIdx] : undefined;
-  const done     = !current;
-  const matches  = useMemo(() => fullQueue.filter(t=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like"), [fullQueue, swipes, room.partnerSwipes]);
+  const done     = !current && exhausted;
+  const matchCount = useMemo(() =>
+    Object.keys(swipes).filter(id => swipes[id]==="like" && room.partnerSwipes[id]==="like").length,
+    [swipes, room.partnerSwipes]);
   const unswiped = useMemo(() => queue.filter(t=>!swipes[t.id]).length, [queue, swipes]);
+
+  // Auto-load next page when running low on unswiped titles
+  useEffect(() => {
+    if (unswiped < 15 && !exhausted && !loadingMore) loadMore(catalogPage);
+  }, [unswiped, exhausted, loadingMore, catalogPage]);
 
   const swipe = (dir) => {
     if (!current||exitingRef.current||done) return;
@@ -946,8 +803,8 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
     if (dir==="like") {
       // Check if partner has already swiped like on this title
       if (room.partnerSwipes[current.id]==="like") {
-        if (!(room.matches||[]).some(m=>m.id===current.id)) {
-          room.matches=[...(room.matches||[]),current];
+        if (!(room.matchIds||[]).includes(current.id)) {
+          room.matchIds=[...(room.matchIds||[]),current.id];
           onMatch(room);
           // Notify partner about the match
           sendNotification(room.partner.id, "match", `🎉 You matched on "${current.title}"!`, room.id);
@@ -976,7 +833,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
         </div>
         <div style={{display:"flex",gap:6}}>
           <button style={{...S.matchBadge,background:"rgba(255,255,255,0.08)",borderColor:"rgba(255,255,255,0.15)",color:"#fff"}} onClick={()=>setShowFilters(p=>!p)}>⚙️</button>
-          <button style={S.matchBadge} onClick={onViewMatches}>❤️ {matches.length}</button>
+          <button style={S.matchBadge} onClick={onViewMatches}>❤️ {matchCount}</button>
         </div>
       </header>
 
@@ -1031,7 +888,11 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
           <h3 style={{color:"#fff",margin:0}}>{selectedGenres.length>0||contentType!=="both"?"No titles match":"All done!"}</h3>
           <p style={S.muted}>{selectedGenres.length>0||contentType!=="both"?"Try adjusting your filters":"You've swiped everything."}</p>
           {(selectedGenres.length>0||contentType!=="both")&&<button style={{...S.btn,background:"rgba(255,255,255,0.08)"}} onClick={clearFilters}>Clear Filters</button>}
-          <button style={S.btn} onClick={onViewMatches}>See {matches.length} Matches →</button>
+          <button style={S.btn} onClick={onViewMatches}>See {matchCount} Matches →</button>
+        </div>
+      ):!current&&!exhausted&&loadingMore?(
+        <div style={S.empty}>
+          <div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading titles...</div>
         </div>
       ):(
         <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",paddingTop:8}}>
@@ -1090,6 +951,13 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 // ─── MATCHES ──────────────────────────────────────────────────────────────────
 function MatchesScreen({ room, authUser, onBack, onToggleWatched }) {
   const [ratings, setRatings] = useState({});
+  const [matchTitles, setMatchTitles] = useState([]);
+
+  useEffect(() => {
+    if (!room.matchIds?.length) { setMatchTitles([]); return; }
+    supabase.from("catalog").select("*").in("id", room.matchIds)
+      .then(({ data }) => setMatchTitles(data || []));
+  }, []);
 
   useEffect(() => {
     if (!authUser) return;
@@ -1106,7 +974,7 @@ function MatchesScreen({ room, authUser, onBack, onToggleWatched }) {
     await supabase.from("user_watched").upsert({ user_id: authUser.id, title_id: titleId, rating: star });
   };
 
-  const matches=(room.queue||[]).filter(t=>room.userSwipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
+  const matches = matchTitles;
   const watchedIds = room.watchedIds || [];
   const unwatched = matches.filter(t=>!watchedIds.includes(t.id));
   const watched   = matches.filter(t=>watchedIds.includes(t.id));
@@ -1798,7 +1666,7 @@ function FeedbackScreen({ authUser, profile, onBack }) {
 }
 
 // ─── MY MOVIES SCREEN ─────────────────────────────────────────────────────────
-function MyMoviesScreen({ authUser, catalog, onBack }) {
+function MyMoviesScreen({ authUser, onBack }) {
   const [likedTitles, setLikedTitles] = useState([]);
   const [watched, setWatched]         = useState(new Set());
   const [ratings, setRatings]         = useState({});
@@ -1816,11 +1684,14 @@ function MyMoviesScreen({ authUser, catalog, onBack }) {
       const watchedSet = new Set((watchedData||[]).map(w => w.title_id));
       const ratingsMap = {};
       (watchedData||[]).forEach(w => { if (w.rating) ratingsMap[w.title_id] = w.rating; });
-      const likedIds   = new Set((swipes||[]).map(s => s.title_id));
-      const titleMap   = Object.fromEntries(catalog.map(t => [String(t.id), t]));
-      const titles     = [...likedIds].map(id => titleMap[String(id)]).filter(Boolean);
-      titles.sort((a,b) => a.title.localeCompare(b.title));
-      setLikedTitles(titles);
+      const likedIds = [...new Set((swipes||[]).map(s => s.title_id))];
+      if (likedIds.length > 0) {
+        const { data: catalogData } = await supabase.from("catalog")
+          .select("id,type,title,year,genres,poster,backdrop,overview,rating,services")
+          .in("id", likedIds);
+        const titles = (catalogData || []).sort((a,b) => a.title.localeCompare(b.title));
+        setLikedTitles(titles);
+      }
       setWatched(watchedSet);
       setRatings(ratingsMap);
       setLoading(false);
@@ -1926,7 +1797,7 @@ function MyMoviesScreen({ authUser, catalog, onBack }) {
 }
 
 // ─── STATS SCREEN ────────────────────────────────────────────────────────────
-function StatsScreen({ authUser, profile, rooms, catalog, onBack, onMyMovies }) {
+function StatsScreen({ authUser, profile, rooms, onBack, onMyMovies }) {
   const [swipeStats, setSwipeStats] = useState(null);
   const [loading, setLoading]       = useState(true);
 
@@ -1946,13 +1817,13 @@ function StatsScreen({ authUser, profile, rooms, catalog, onBack, onMyMovies }) 
       const totalWatched = rooms.reduce((sum, r) => sum + (r.watchedIds||[]).length, 0);
 
       // Total matches across all rooms
-      const totalMatches = rooms.reduce((sum, r) => sum + (r.matches||[]).length, 0);
+      const totalMatches = rooms.reduce((sum, r) => sum + (r.matchIds?.length || 0), 0);
 
       // Most active partner — room with most matches
       const partnerMatchMap = {};
       rooms.forEach(r => {
         const name = r.partner?.name || "Unknown";
-        partnerMatchMap[name] = (partnerMatchMap[name] || 0) + (r.matches||[]).length;
+        partnerMatchMap[name] = (partnerMatchMap[name] || 0) + (r.matchIds?.length || 0);
       });
       const mostActivePartner = Object.entries(partnerMatchMap)
         .sort((a,b) => b[1] - a[1])[0] || null;
