@@ -718,7 +718,7 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
       {rooms.length===0
         ?<div style={S.empty}><div style={{fontSize:52}}>🎬</div><p>No rooms yet — find a partner to start swiping!</p></div>
         :rooms.map((r)=>{
-          const swiped=Object.keys(r.userSwipes||{}).length;
+          const swiped=(r.queue||[]).filter(t=>r.userSwipes?.[t.id]).length;
           const pct=Math.round((swiped/Math.max(r.queue?.length||1,1))*100);
           const isSelected = selected.has(r.id);
           return(
@@ -916,8 +916,8 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
     return true;
   }), [fullQueue, contentType, selectedGenres]);
 
-  const filteredIdx = useMemo(() => Math.max(0, queue.findIndex(t=>!swipes[t.id])), [queue, swipes]);
-  const current  = queue[filteredIdx];
+  const filteredIdx = useMemo(() => queue.findIndex(t=>!swipes[t.id]), [queue, swipes]);
+  const current  = filteredIdx >= 0 ? queue[filteredIdx] : undefined;
   const done     = !current;
   const matches  = useMemo(() => fullQueue.filter(t=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like"), [fullQueue, swipes, room.partnerSwipes]);
   const unswiped = useMemo(() => queue.filter(t=>!swipes[t.id]).length, [queue, swipes]);
