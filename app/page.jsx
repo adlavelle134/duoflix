@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 
 // ─── TMDB CONFIG ──────────────────────────────────────────────────────────────
-const TMDB_KEY  = "296a29cf236f5335daaca27b4667b5cf";
-const TMDB_BASE = "https://api.themoviedb.org/3";
 const IMG_W500  = "https://image.tmdb.org/t/p/w500";
-const IMG_W780  = "https://image.tmdb.org/t/p/w780";
+const IMG_W300  = "https://image.tmdb.org/t/p/w300";
 
 const GENRE_MAP = {
   28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",
@@ -18,13 +16,13 @@ const GENRE_MAP = {
 };
 const PROVIDER_MAP = {
   8:"Netflix",337:"Disney+",350:"Apple TV+",1899:"Max",
-  15:"Hulu",9:"Prime Video",386:"Peacock",531:"Paramount+",
+  15:"Hulu",9:"Prime Video",386:"Peacock",531:"Paramount+",283:"Crunchyroll",
 };
-const ALL_SERVICES = ["Netflix","Disney+","Apple TV+","Max","Prime Video","Hulu","Peacock","Paramount+"];
+const ALL_SERVICES = ["Netflix","Disney+","Apple TV+","Max","Prime Video","Hulu","Peacock","Paramount+","Crunchyroll"];
 const SERVICE_COLORS = {
   "Netflix":"#E50914","Disney+":"#113CCF","Apple TV+":"#4a4a4a",
   "Max":"#002BE7","Prime Video":"#00A8E1","Hulu":"#1CE783",
-  "Peacock":"#F037A5","Paramount+":"#0064FF",
+  "Peacock":"#F037A5","Paramount+":"#0064FF","Crunchyroll":"#F47521",
 };
 // No mock users — real users loaded from Supabase
 
@@ -59,7 +57,7 @@ const FALLBACK_CATALOG = [
 // ─── TMDB CATALOG FETCHER ────────────────────────────────────────────────────
 async function tryFetchLiveCatalog(onProgress) {
   try {
-    const test = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&region=US&page=1`);
+    const test = await fetch(`/api/tmdb?path=/trending/movie/week&language=en-US&region=US&page=1`);
     if (!test.ok) return null;
     const testData = await test.json();
     if (!testData.results?.length) return null;
@@ -68,49 +66,45 @@ async function tryFetchLiveCatalog(onProgress) {
 
     for (let p = 1; p <= 50; p++) {
       try {
-        const r = await fetch(`${TMDB_BASE}/trending/movie/week?api_key=${TMDB_KEY}&language=en-US&region=US&page=${p}`);
+        const r = await fetch(`/api/tmdb?path=/trending/movie/week&language=en-US&region=US&page=${p}`);
         const d = await r.json();
         if (!d.results?.length) break;
         for (const m of (d.results||[])) {
           if (seen.has(`m${m.id}`)) continue;
           seen.add(`m${m.id}`);
-          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W780+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",popularity:m.popularity||0,language:m.original_language||"en",services:[] });
+          all.push({ id:`m${m.id}`,tmdbId:m.id,type:"movie",title:m.title,year:m.release_date?.slice(0,4)||"",genres:(m.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:m.poster_path?IMG_W500+m.poster_path:null,backdrop:m.backdrop_path?IMG_W300+m.backdrop_path:null,overview:m.overview||"",rating:m.vote_average?.toFixed(1)||"",popularity:m.popularity||0,language:m.original_language||"en",services:[] });
         }
         if (p%5===0) onProgress(Math.round((p/50)*50));
       } catch(e){}
     }
     for (let p = 1; p <= 10; p++) {
       try {
-        const r = await fetch(`${TMDB_BASE}/trending/tv/week?api_key=${TMDB_KEY}&language=en-US&region=US&page=${p}`);
+        const r = await fetch(`/api/tmdb?path=/trending/tv/week&language=en-US&region=US&page=${p}`);
         const d = await r.json();
         if (!d.results?.length) break;
         for (const t of (d.results||[])) {
           if (seen.has(`t${t.id}`)) continue;
           seen.add(`t${t.id}`);
-          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W780+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",popularity:t.popularity||0,language:t.original_language||"en",services:[] });
+          all.push({ id:`t${t.id}`,tmdbId:t.id,type:"tv",title:t.name,year:t.first_air_date?.slice(0,4)||"",genres:(t.genre_ids||[]).map(g=>GENRE_MAP[g]).filter(Boolean).slice(0,3),poster:t.poster_path?IMG_W500+t.poster_path:null,backdrop:t.backdrop_path?IMG_W300+t.backdrop_path:null,overview:t.overview||"",rating:t.vote_average?.toFixed(1)||"",popularity:t.popularity||0,language:t.original_language||"en",services:[] });
         }
       } catch(e){}
     }
 
-    // Fetch providers for ALL titles in batches of 40 with a small delay
-    // to stay within TMDB's rate limit of ~40 requests/second
     // Keep only English language titles
-    const englishOnly = all.filter(t => t.language === "en");
-    all.length = 0;
-    all.push(...englishOnly);
+    const titles = all.filter(t => t.language === "en");
 
     onProgress(65);
     const BATCH_SIZE = 40;
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-    for (let i = 0; i < all.length; i += BATCH_SIZE) {
-      const batch = all.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < titles.length; i += BATCH_SIZE) {
+      const batch = titles.slice(i, i + BATCH_SIZE);
       await Promise.all(batch.map(async (t) => {
         try {
-          const ep = t.type==="movie"
-            ? `${TMDB_BASE}/movie/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`
-            : `${TMDB_BASE}/tv/${t.tmdbId}/watch/providers?api_key=${TMDB_KEY}`;
-          const r = await fetch(ep);
+          const path = t.type === "movie"
+            ? `/movie/${t.tmdbId}/watch/providers`
+            : `/tv/${t.tmdbId}/watch/providers`;
+          const r = await fetch(`/api/tmdb?path=${path}`);
           if (!r.ok) return;
           const d = await r.json();
           t.services = (d.results?.US?.flatrate||[])
@@ -119,21 +113,19 @@ async function tryFetchLiveCatalog(onProgress) {
             .filter(s=>ALL_SERVICES.includes(s));
         } catch(e){}
       }));
-      // Small delay between batches to avoid rate limiting
-      if (i + BATCH_SIZE < all.length) await delay(250);
-      // Update progress from 65% to 95% as providers load
-      onProgress(Math.min(95, 65 + Math.round(((i + BATCH_SIZE) / all.length) * 30)));
+      if (i + BATCH_SIZE < titles.length) await delay(250);
+      onProgress(Math.min(95, 65 + Math.round(((i + BATCH_SIZE) / titles.length) * 30)));
     }
 
-    // Only use fallback service for titles that truly have no provider data
-    const cycle = ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+"];
+    // Assign a fallback service to titles with no provider data
+    const cycle = ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+","Crunchyroll"];
     let ci = 0;
-    for (const t of all) {
+    for (const t of titles) {
       if (!t.services.length) { t.services=[cycle[ci%cycle.length]]; ci++; }
     }
 
     onProgress(100);
-    return all;
+    return titles;
   } catch(e) { return null; }
 }
 
@@ -167,18 +159,6 @@ async function saveRoomToDB(room, userId) {
   return !error;
 }
 
-// Save a single swipe to the swipes table
-async function saveSwipeToDB(roomId, userId, titleId, direction) {
-  try {
-    await supabase.from("swipes").upsert({
-      room_id: roomId,
-      user_id: userId,
-      title_id: titleId,
-      direction,
-    }, { onConflict: "room_id,user_id,title_id" });
-  } catch(e) {}
-}
-
 // Load all swipes for a room — returns { [userId]: { [titleId]: direction } }
 async function loadSwipesForRoom(roomId) {
   try {
@@ -210,29 +190,38 @@ async function loadRoomsFromDB(userId, catalog) {
 
     if (!allRooms.length) return [];
 
-    const rooms = await Promise.all(allRooms.map(async (r) => {
-      const swipesByUser = await loadSwipesForRoom(r.id);
-      const mySwipes = swipesByUser[userId] || {};
+    // Batch load all swipes for all rooms in a single query
+    const roomIds = allRooms.map(r => r.id);
+    const { data: allSwipesData } = await supabase.from("swipes").select("*").in("room_id", roomIds);
+    const swipesByRoom = {};
+    for (const s of (allSwipesData || [])) {
+      if (!swipesByRoom[s.room_id]) swipesByRoom[s.room_id] = {};
+      if (!swipesByRoom[s.room_id][s.user_id]) swipesByRoom[s.room_id][s.user_id] = {};
+      swipesByRoom[s.room_id][s.user_id][s.title_id] = s.direction;
+    }
 
-      // Partner is whoever is NOT the current user
+    // Batch load owner profiles for rooms where the current user is the partner
+    const ownerIds = [...new Set(allRooms.filter(r => r.owner_id !== userId).map(r => r.owner_id))];
+    let ownerProfiles = {};
+    if (ownerIds.length > 0) {
+      const { data: profiles } = await supabase.from("profiles").select("*").in("id", ownerIds);
+      ownerProfiles = Object.fromEntries((profiles||[]).map(p => [p.id, p]));
+    }
+
+    const rooms = allRooms.map((r) => {
+      const swipesByUser = swipesByRoom[r.id] || {};
+      const mySwipes = swipesByUser[userId] || {};
       const partnerId = r.owner_id === userId ? r.partner_id : r.owner_id;
       const partnerSwipes = swipesByUser[partnerId] || {};
 
       const queue = (r.queue_ids||[]).map(id=>map[id]).filter(Boolean);
+      const matches = queue.filter(t => mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like");
 
-      // True matches: BOTH users swiped like
-      const matches = queue.filter(t =>
-        mySwipes[t.id]==="like" && partnerSwipes[t.id]==="like"
-      );
-
-      // Figure out who the partner is — handle both owner and partner perspective
       let partnerInfo;
       if (r.owner_id === userId) {
-        // I am the owner, partner is the invited user
         partnerInfo = { id: r.partner_id, name: r.partner_name, avatar: r.partner_avatar, services: r.partner_services||[] };
       } else {
-        // I am the partner, owner is the other person — load their profile
-        const { data: ownerProfile } = await supabase.from("profiles").select("*").eq("id", r.owner_id).single();
+        const ownerProfile = ownerProfiles[r.owner_id];
         partnerInfo = { id: r.owner_id, name: ownerProfile?.name||"Unknown", avatar: "😊", services: ownerProfile?.services||[] };
       }
 
@@ -248,7 +237,7 @@ async function loadRoomsFromDB(userId, catalog) {
         genres: r.genres || [],
         watchedIds: r.watched_ids || [],
       };
-    }));
+    });
 
     return rooms;
   } catch(e) {
@@ -311,13 +300,34 @@ export default function DuoFlix() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 2. Load catalog in background
+  // 2. Load catalog — use localStorage cache if fresh (6h TTL), otherwise fetch
   useEffect(() => {
+    const CACHE_KEY = "duoflix_catalog_v1";
+    const CACHE_TTL = 6 * 60 * 60 * 1000;
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_TTL && data?.length) {
+          setCatalog(data);
+          setLoadProgress(100);
+          setCatalogReady(true);
+          return;
+        }
+      }
+    } catch(e) {}
+
     tryFetchLiveCatalog(setLoadProgress).then(live => {
-      setCatalog(live?.length ? live : FALLBACK_CATALOG);
+      const catalog = live?.length ? live : FALLBACK_CATALOG;
+      setCatalog(catalog);
       setUsingFallback(!live?.length);
       setLoadProgress(100);
       setCatalogReady(true);
+      if (live?.length) {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ data: live, timestamp: Date.now() }));
+        } catch(e) {}
+      }
     });
   }, []);
 
@@ -447,18 +457,24 @@ export default function DuoFlix() {
       persistRoom={persistRoom} />
   );
   if (screen === "matches" && activeRoom) return (
-    <MatchesScreen room={activeRoom} onBack={()=>setScreen("swipe")}
-      onToggleWatched={async (titleId) => {
+    <MatchesScreen room={activeRoom} authUser={authUser} onBack={()=>setScreen("swipe")}
+      onToggleWatched={async (titleId, isCurrentlyWatched) => {
         const current = activeRoom.watchedIds || [];
-        const updated = current.includes(titleId)
+        const updated = isCurrentlyWatched
           ? current.filter(id=>id!==titleId)
           : [...current, titleId];
         const updatedRoom = {...activeRoom, watchedIds: updated};
         setActiveRoom(updatedRoom);
-        // Save to DB
+        // Save to rooms DB
         await supabase.from("rooms").update({ watched_ids: updated }).eq("id", activeRoom.id);
         // Update rooms list too
         setRooms(prev => prev.map(r => r.id===activeRoom.id ? {...r, watchedIds: updated} : r));
+        // Sync to user_watched for personal ratings
+        if (isCurrentlyWatched) {
+          await supabase.from("user_watched").delete().eq("user_id", authUser.id).eq("title_id", titleId);
+        } else {
+          await supabase.from("user_watched").upsert({ user_id: authUser.id, title_id: titleId });
+        }
       }}
     />
   );
@@ -771,7 +787,7 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
 }
 
 // ─── FIND PARTNER ─────────────────────────────────────────────────────────────
-function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom, persistRoom }) {
+function FindPartner({ currentUser, catalog, setRooms, onBack, onJoinRoom, persistRoom }) {
   const [query, setQuery] = useState("");
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -851,8 +867,6 @@ function FindPartner({ currentUser, catalog, rooms, setRooms, onBack, onJoinRoom
 const ALL_GENRES = ["Action","Adventure","Animation","Comedy","Crime","Documentary","Drama","Family","Fantasy","History","Horror","Music","Mystery","Romance","Sci-Fi","Thriller","War","Western","Sci-Fi & Fantasy","Action & Adventure","Kids","Reality"];
 
 function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
-  const startIdx = Object.keys(room.userSwipes||{}).length;
-  const [idx, setIdx]           = useState(startIdx);
   const [swipes, setSwipes]     = useState({...room.userSwipes});
   const [newMatch, setNewMatch] = useState(null);
   const [dragX, setDragX]       = useState(0);
@@ -894,20 +908,19 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 
   const fullQueue = room.queue||[];
 
-  // Apply filters to queue
-  const queue = fullQueue.filter(t => {
+  // Apply filters to queue — memoized to avoid recomputing on every drag event
+  const queue = useMemo(() => fullQueue.filter(t => {
     if (contentType==="movie" && t.type!=="movie") return false;
     if (contentType==="tv" && t.type!=="tv") return false;
     if (selectedGenres.length>0 && !t.genres.some(g=>selectedGenres.includes(g))) return false;
     return true;
-  });
+  }), [fullQueue, contentType, selectedGenres]);
 
-  // Find current card index within filtered queue
-  const filteredIdx = Math.max(0, queue.findIndex(t=>!swipes[t.id]));
-  const current = queue[filteredIdx];
-  const done    = !current;
-  const matches = fullQueue.filter((t)=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
-  const unswiped = queue.filter(t=>!swipes[t.id]).length;
+  const filteredIdx = useMemo(() => Math.max(0, queue.findIndex(t=>!swipes[t.id])), [queue, swipes]);
+  const current  = queue[filteredIdx];
+  const done     = !current;
+  const matches  = useMemo(() => fullQueue.filter(t=>swipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like"), [fullQueue, swipes, room.partnerSwipes]);
+  const unswiped = useMemo(() => queue.filter(t=>!swipes[t.id]).length, [queue, swipes]);
 
   const swipe = (dir) => {
     if (!current||exitingRef.current||done) return;
@@ -929,7 +942,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
       }
     }
     persistRoom(room, current.id, dir);
-    setTimeout(()=>{ setIdx(i=>i+1); setExiting(null); setDragX(0); exitingRef.current=false; },320);
+    setTimeout(()=>{ setExiting(null); setDragX(0); exitingRef.current=false; },320);
   };
 
   const onDown=(e)=>{ if(exitingRef.current)return; dragStart.current=e.touches?.[0]?.clientX??e.clientX; setDragging(true); };
@@ -1060,7 +1073,24 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 }
 
 // ─── MATCHES ──────────────────────────────────────────────────────────────────
-function MatchesScreen({ room, onBack, onToggleWatched }) {
+function MatchesScreen({ room, authUser, onBack, onToggleWatched }) {
+  const [ratings, setRatings] = useState({});
+
+  useEffect(() => {
+    if (!authUser) return;
+    supabase.from("user_watched").select("title_id,rating").eq("user_id", authUser.id)
+      .then(({ data }) => {
+        const map = {};
+        (data||[]).forEach(r => { if (r.rating) map[r.title_id] = r.rating; });
+        setRatings(map);
+      });
+  }, []);
+
+  const rateTitle = async (titleId, star) => {
+    setRatings(prev => ({...prev, [titleId]: star}));
+    await supabase.from("user_watched").upsert({ user_id: authUser.id, title_id: titleId, rating: star });
+  };
+
   const matches=(room.queue||[]).filter(t=>room.userSwipes[t.id]==="like"&&room.partnerSwipes[t.id]==="like");
   const watchedIds = room.watchedIds || [];
   const unwatched = matches.filter(t=>!watchedIds.includes(t.id));
@@ -1089,7 +1119,7 @@ function MatchesScreen({ room, onBack, onToggleWatched }) {
                     <div style={{display:"flex",gap:3,flexWrap:"wrap",justifyContent:"center",marginBottom:6}}>
                       {t.services.map(s=><span key={s} style={{background:SERVICE_COLORS[s]||"#444",borderRadius:3,padding:"1px 5px",fontSize:9,color:"#fff"}}>{s}</span>)}
                     </div>
-                    <button onClick={()=>onToggleWatched(t.id)}
+                    <button onClick={()=>onToggleWatched(t.id, false)}
                       style={{width:"100%",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,color:"#22c55e",fontSize:11,fontWeight:600,padding:"5px",cursor:"pointer"}}>
                       ✓ Mark Watched
                     </button>
@@ -1103,17 +1133,25 @@ function MatchesScreen({ room, onBack, onToggleWatched }) {
             <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Watched ({watched.length})</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               {watched.map(t=>(
-                <div key={t.id} style={{...S.matchCard,opacity:0.5}}>
+                <div key={t.id} style={{...S.matchCard,opacity:0.7}}>
                   <div style={{position:"relative"}}>
                     {t.poster?<img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>:<div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>}
                     <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>✅</div>
                   </div>
                   <div style={{padding:"8px 8px 10px"}}>
                     <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6,lineHeight:1.3}}>{t.title}</div>
-                    <button onClick={()=>onToggleWatched(t.id)}
-                      style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,color:"rgba(255,255,255,0.4)",fontSize:11,padding:"5px",cursor:"pointer"}}>
+                    <button onClick={()=>onToggleWatched(t.id, true)}
+                      style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,color:"rgba(255,255,255,0.4)",fontSize:11,padding:"5px",cursor:"pointer",marginBottom:6}}>
                       ↩ Unmark
                     </button>
+                    <div style={{display:"flex",justifyContent:"center",gap:3}}>
+                      {[1,2,3,4,5].map(star=>(
+                        <button key={star} onClick={()=>rateTitle(t.id, star)}
+                          style={{background:"none",border:"none",padding:"2px",cursor:"pointer",fontSize:16,color:star<=(ratings[t.id]||0)?"#f97316":"rgba(255,255,255,0.2)"}}>
+                          {star<=(ratings[t.id]||0)?"★":"☆"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1268,7 +1306,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 
   const KERNEL_USER = {
     id: "kernel-demo", name: "Kernel 🍿",
-    services: ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+","Peacock","Paramount+"]
+    services: ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+","Peacock","Paramount+","Crunchyroll"]
   };
 
   // Steps: 0=intro, 1=home, 2=find partner, 3=room created, 4=swipe left, 5=swipe right, 6=match, 7=notifications, 8=watched, 9=done
@@ -1748,6 +1786,7 @@ function FeedbackScreen({ authUser, profile, onBack }) {
 function MyMoviesScreen({ authUser, catalog, onBack }) {
   const [likedTitles, setLikedTitles] = useState([]);
   const [watched, setWatched]         = useState(new Set());
+  const [ratings, setRatings]         = useState({});
   const [loading, setLoading]         = useState(true);
   const [filter, setFilter]           = useState("all");
 
@@ -1757,15 +1796,18 @@ function MyMoviesScreen({ authUser, catalog, onBack }) {
         .from("swipes").select("title_id")
         .eq("user_id", authUser.id).eq("direction", "like");
       const { data: watchedData } = await supabase
-        .from("user_watched").select("title_id")
+        .from("user_watched").select("title_id,rating")
         .eq("user_id", authUser.id);
       const watchedSet = new Set((watchedData||[]).map(w => w.title_id));
+      const ratingsMap = {};
+      (watchedData||[]).forEach(w => { if (w.rating) ratingsMap[w.title_id] = w.rating; });
       const likedIds   = new Set((swipes||[]).map(s => s.title_id));
       const titleMap   = Object.fromEntries(catalog.map(t => [String(t.id), t]));
       const titles     = [...likedIds].map(id => titleMap[String(id)]).filter(Boolean);
       titles.sort((a,b) => a.title.localeCompare(b.title));
       setLikedTitles(titles);
       setWatched(watchedSet);
+      setRatings(ratingsMap);
       setLoading(false);
     }
     load();
@@ -1776,12 +1818,18 @@ function MyMoviesScreen({ authUser, catalog, onBack }) {
     const updated = new Set(watched);
     if (isWatched) {
       updated.delete(titleId);
+      setRatings(prev => { const r = {...prev}; delete r[titleId]; return r; });
       await supabase.from("user_watched").delete().eq("user_id", authUser.id).eq("title_id", titleId);
     } else {
       updated.add(titleId);
       await supabase.from("user_watched").upsert({ user_id: authUser.id, title_id: titleId });
     }
     setWatched(updated);
+  };
+
+  const rateTitle = async (titleId, star) => {
+    setRatings(prev => ({...prev, [titleId]: star}));
+    await supabase.from("user_watched").upsert({ user_id: authUser.id, title_id: titleId, rating: star });
   };
 
   const filtered = filter==="unwatched" ? likedTitles.filter(t=>!watched.has(t.id))
@@ -1842,6 +1890,16 @@ function MyMoviesScreen({ authUser, catalog, onBack }) {
                   }}>
                     {watched.has(t.id)?"↩ Unmark":"✓ Mark Watched"}
                   </button>
+                  {watched.has(t.id)&&(
+                    <div style={{display:"flex",justifyContent:"center",gap:3,marginTop:5}}>
+                      {[1,2,3,4,5].map(star=>(
+                        <button key={star} onClick={()=>rateTitle(t.id, star)}
+                          style={{background:"none",border:"none",padding:"2px",cursor:"pointer",fontSize:16,color:star<=(ratings[t.id]||0)?"#f97316":"rgba(255,255,255,0.2)"}}>
+                          {star<=(ratings[t.id]||0)?"★":"☆"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -2090,10 +2148,6 @@ function ProfilePage({ profile, email, onSave, onBack }) {
     </div></div>
   );
 }
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
-function genSwipes(titles){const s={};titles.forEach((t)=>{s[t.id]=Math.random()>0.42?"like":"pass";});return s;}
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const S={
