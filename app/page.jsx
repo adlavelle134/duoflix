@@ -208,7 +208,7 @@ async function loadRoomsFromDB(userId, catalog) {
       ownerProfiles = Object.fromEntries((profiles||[]).map(p => [p.id, p]));
     }
 
-    const rooms = allRooms.map((r) => {
+    const baseRooms = allRooms.map((r) => {
       const swipesByUser = swipesByRoom[r.id] || {};
       const mySwipes = swipesByUser[userId] || {};
       const partnerId = r.owner_id === userId ? r.partner_id : r.owner_id;
@@ -238,6 +238,21 @@ async function loadRoomsFromDB(userId, catalog) {
         watchedIds: r.watched_ids || [],
       };
     });
+
+    // Auto-expand queues that are too small (e.g. created during a catalog outage)
+    const rooms = await Promise.all(baseRooms.map(async (room) => {
+      if (room.queue.length >= 50) return room;
+      const shared = room.sharedServices;
+      let expanded = catalog.filter(t => !shared.length || t.services.some(s => shared.includes(s)));
+      if (expanded.length < 20) expanded = [...catalog];
+      expanded.sort((a,b) => (b.popularity||0) - (a.popularity||0));
+      const existingIds = new Set(room.queue.map(t => t.id));
+      const newQueue = [...room.queue, ...expanded.filter(t => !existingIds.has(t.id))].slice(0, 200);
+      // Save expanded queue back to DB (fire-and-forget)
+      supabase.from("rooms").update({ queue_ids: newQueue.map(t => t.id) }).eq("id", room.id);
+      const newMatches = newQueue.filter(t => room.userSwipes[t.id]==="like" && room.partnerSwipes[t.id]==="like");
+      return { ...room, queue: newQueue, matches: newMatches };
+    }));
 
     return rooms;
   } catch(e) {
