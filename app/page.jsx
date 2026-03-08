@@ -890,7 +890,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
           {(selectedGenres.length>0||contentType!=="both")&&<button style={{...S.btn,background:"rgba(255,255,255,0.08)"}} onClick={clearFilters}>Clear Filters</button>}
           <button style={S.btn} onClick={onViewMatches}>See {matchCount} Matches →</button>
         </div>
-      ):!current&&!exhausted&&loadingMore?(
+      ):!current&&!exhausted?(
         <div style={S.empty}>
           <div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading titles...</div>
         </div>
@@ -1828,9 +1828,13 @@ function StatsScreen({ authUser, profile, rooms, onBack, onMyMovies }) {
       const mostActivePartner = Object.entries(partnerMatchMap)
         .sort((a,b) => b[1] - a[1])[0] || null;
 
-      // Genre stats — look up liked/passed title IDs against room queues
+      // Genre stats — fetch genre data for swiped titles from catalog
+      const allTitleIds = [...new Set([...likes.map(s => s.title_id), ...passes.map(s => s.title_id)])];
       const titleMap = {};
-      rooms.forEach(r => (r.queue||[]).forEach(t => { titleMap[t.id] = t; }));
+      if (allTitleIds.length > 0) {
+        const { data: catalogData } = await supabase.from("catalog").select("id,genres").in("id", allTitleIds);
+        (catalogData||[]).forEach(t => { titleMap[t.id] = t; });
+      }
 
       const genreLikes  = {};
       const genrePasses = {};
