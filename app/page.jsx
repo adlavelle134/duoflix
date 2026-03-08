@@ -714,9 +714,11 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
     if (loadingRef.current || exhausted) return;
     loadingRef.current = true;
     setLoadingMore(true);
+    const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
     let query = supabase.from("catalog")
       .select("id,type,title,year,genres,poster,backdrop,overview,rating,services,popularity")
       .order("popularity", { ascending: false })
+      .gte("last_updated", cutoff)
       .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
     if (room.sharedServices?.length > 0)
       query = query.overlaps("services", room.sharedServices);
