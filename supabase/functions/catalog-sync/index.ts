@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const TMDB_KEY = Deno.env.get("NEXT_PUBLIC_TMDB_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -30,9 +28,27 @@ async function tmdbGet(path: string): Promise<unknown> {
   return res.json();
 }
 
+// PostgREST upsert — bypasses supabase-js entirely to avoid library issues in Deno
+const REST_URL = `${SUPABASE_URL}/rest/v1/catalog?on_conflict=id`;
+const REST_HEADERS = {
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  "apikey": SUPABASE_SERVICE_ROLE_KEY,
+  "Prefer": "resolution=merge-duplicates,return=minimal",
+};
+
+async function upsertBatch(batch: unknown[]): Promise<string | null> {
+  const res = await fetch(REST_URL, {
+    method: "POST",
+    headers: REST_HEADERS,
+    body: JSON.stringify(batch),
+  });
+  if (!res.ok) return await res.text();
+  return null;
+}
+
 Deno.serve(async (_req) => {
   try {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   const all: Array<{
     id: string; tmdb_id: number; type: string; title: string; year: string;
@@ -116,18 +132,15 @@ Deno.serve(async (_req) => {
     if (i + BATCH_SIZE < all.length) await delay(250);
   }
 
-  // ── Upsert to Supabase in batches of 100 ──
-  let inserted = 0, updated = 0;
+  // ── Upsert to Supabase via PostgREST in batches of 100 ──
+  let inserted = 0;
   const now = new Date().toISOString();
 
   for (let i = 0; i < all.length; i += 100) {
     const batch = all.slice(i, i + 100).map((item) => ({ ...item, last_updated: now }));
     try {
-      const result = await supabase.from("catalog").upsert(batch, {
-        onConflict: "id",
-        ignoreDuplicates: false,
-      });
-      if (result?.error) { errors++; console.error("Upsert error:", result.error); }
+      const err = await upsertBatch(batch);
+      if (err) { errors++; console.error("Upsert error:", err); }
       else { inserted += batch.length; }
     } catch (e) {
       errors++;
@@ -136,7 +149,7 @@ Deno.serve(async (_req) => {
   }
 
   return new Response(
-    JSON.stringify({ inserted, updated, total: all.length, errors }),
+    JSON.stringify({ inserted, total: all.length, errors }),
     { headers: { "Content-Type": "application/json" } },
   );
   } catch (e) {
