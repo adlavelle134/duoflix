@@ -7,6 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const IMG_W500 = "https://image.tmdb.org/t/p/w500";
 const IMG_W780 = "https://image.tmdb.org/t/p/w780";
+const IMG_W185 = "https://image.tmdb.org/t/p/w185";
 
 const PROVIDER_MAP: Record<number, string> = {
   8: "Netflix", 337: "Disney+", 350: "Apple TV+", 1899: "Max",
@@ -56,6 +57,9 @@ Deno.serve(async (_req) => {
     id: string; tmdb_id: number; type: string; title: string; year: string;
     overview: string; rating: string; poster: string | null; backdrop: string | null;
     genres: string[]; services: string[]; popularity: number;
+    release_date: string;
+    trailer_url: string | null;
+    cast_members: Array<{ name: string; character: string; profile_path: string | null }>;
   }> = [];
   const seen = new Set<string>();
   let errors = 0;
@@ -76,13 +80,16 @@ Deno.serve(async (_req) => {
         seen.add(key);
         all.push({
           id: key, tmdb_id: m.id, type: "movie",
-          title: m.title ?? "", year: m.release_date?.slice(0, 4) ?? "",
+          title: m.title ?? "", year: m.release_date ?? "",
           overview: m.overview ?? "",
           rating: m.vote_average?.toFixed(1) ?? "",
           poster: m.poster_path ? IMG_W500 + m.poster_path : null,
           backdrop: m.backdrop_path ? IMG_W780 + m.backdrop_path : null,
           genres: (m.genre_ids ?? []).map((g) => GENRE_MAP[g]).filter((x): x is string => !!x).slice(0, 3),
           services: [], popularity: m.popularity ?? 0,
+          release_date: m.release_date ?? "",
+          trailer_url: null,
+          cast_members: [],
         });
       }
     } catch (_e) { errors++; }
@@ -104,34 +111,67 @@ Deno.serve(async (_req) => {
         seen.add(key);
         all.push({
           id: key, tmdb_id: t.id, type: "tv",
-          title: t.name ?? "", year: t.first_air_date?.slice(0, 4) ?? "",
+          title: t.name ?? "", year: t.first_air_date ?? "",
           overview: t.overview ?? "",
           rating: t.vote_average?.toFixed(1) ?? "",
           poster: t.poster_path ? IMG_W500 + t.poster_path : null,
           backdrop: t.backdrop_path ? IMG_W780 + t.backdrop_path : null,
           genres: (t.genre_ids ?? []).map((g) => GENRE_MAP[g]).filter((x): x is string => !!x).slice(0, 3),
           services: [], popularity: t.popularity ?? 0,
+          release_date: t.first_air_date ?? "",
+          trailer_url: null,
+          cast_members: [],
         });
       }
     } catch (_e) { errors++; }
   }
 
-  // ── Fetch watch providers in batches of 40 ──
-  const BATCH_SIZE = 40;
+  // ── Fetch watch providers, trailers, and cast in batches of 20 ──
+  const BATCH_SIZE = 20;
   for (let i = 0; i < all.length; i += BATCH_SIZE) {
     const batch = all.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(async (item) => {
-      try {
-        const path = item.type === "movie"
-          ? `/movie/${item.tmdb_id}/watch/providers`
-          : `/tv/${item.tmdb_id}/watch/providers`;
-        const d = await tmdbGet(path) as { results?: { US?: { flatrate?: Array<{ provider_id: number }> } } };
-        item.services = (d.results?.US?.flatrate ?? [])
-          .map((p) => PROVIDER_MAP[p.provider_id])
-          .filter((x): x is string => !!x);
-      } catch (_e) { errors++; }
+      await Promise.all([
+        // Provider
+        (async () => {
+          try {
+            const path = item.type === "movie"
+              ? `/movie/${item.tmdb_id}/watch/providers`
+              : `/tv/${item.tmdb_id}/watch/providers`;
+            const d = await tmdbGet(path) as { results?: { US?: { flatrate?: Array<{ provider_id: number }> } } };
+            item.services = (d.results?.US?.flatrate ?? [])
+              .map((p) => PROVIDER_MAP[p.provider_id])
+              .filter((x): x is string => !!x);
+          } catch (_e) { errors++; }
+        })(),
+        // Trailer
+        (async () => {
+          try {
+            const path = item.type === "movie"
+              ? `/movie/${item.tmdb_id}/videos`
+              : `/tv/${item.tmdb_id}/videos`;
+            const d = await tmdbGet(path) as { results?: Array<{ type: string; site: string; key: string }> };
+            const trailer = (d.results ?? []).find(v => v.type === "Trailer" && v.site === "YouTube");
+            item.trailer_url = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
+          } catch (_e) { errors++; }
+        })(),
+        // Cast
+        (async () => {
+          try {
+            const path = item.type === "movie"
+              ? `/movie/${item.tmdb_id}/credits`
+              : `/tv/${item.tmdb_id}/credits`;
+            const d = await tmdbGet(path) as { cast?: Array<{ name: string; character: string; profile_path: string | null }> };
+            item.cast_members = (d.cast ?? []).slice(0, 5).map(c => ({
+              name: c.name,
+              character: c.character,
+              profile_path: c.profile_path ? IMG_W185 + c.profile_path : null,
+            }));
+          } catch (_e) { errors++; }
+        })(),
+      ]);
     }));
-    if (i + BATCH_SIZE < all.length) await delay(250);
+    if (i + BATCH_SIZE < all.length) await delay(500);
   }
 
   // ── Upsert to Supabase via PostgREST in batches of 100 ──

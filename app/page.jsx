@@ -696,6 +696,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const [dragX, setDragX]       = useState(0);
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting]   = useState(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [contentType, setContentType] = useState(room.contentType||"both");
   const [selectedGenres, setSelectedGenres] = useState(room.genres||[]);
@@ -716,7 +717,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
     setLoadingMore(true);
     const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
     let query = supabase.from("catalog")
-      .select("id,type,title,year,genres,poster,backdrop,overview,rating,services,popularity")
+      .select("id,type,title,year,genres,poster,backdrop,overview,rating,services,popularity,release_date,trailer_url,cast_members")
       .order("popularity", { ascending: false })
       .gte("last_updated", cutoff)
       .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
@@ -798,6 +799,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 
   const swipe = (dir) => {
     if (!current||exitingRef.current||done) return;
+    setShowDetail(false);
     exitingRef.current=true;
     setExiting(dir);
     const ns={...swipes,[current.id]:dir};
@@ -821,7 +823,13 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 
   const onDown=(e)=>{ if(exitingRef.current)return; dragStart.current=e.touches?.[0]?.clientX??e.clientX; setDragging(true); };
   const onMove=(e)=>{ if(!dragging||dragStart.current==null||exitingRef.current)return; setDragX((e.touches?.[0]?.clientX??e.clientX)-dragStart.current); };
-  const onUp=()=>{ if(!dragging)return; setDragging(false); dragStart.current=null; if(Math.abs(dragX)>90)swipe(dragX>0?"like":"pass"); else setDragX(0); };
+  const onUp=()=>{ if(!dragging)return; setDragging(false); dragStart.current=null; if(Math.abs(dragX)>90){swipe(dragX>0?"like":"pass");}else{if(Math.abs(dragX)<5)setShowDetail(p=>!p); setDragX(0);} };
+
+  const formatReleaseDate = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  };
 
   const rot=dragX*0.07, likeOp=Math.max(0,Math.min(dragX/80,1)), passOp=Math.max(0,Math.min(-dragX/80,1));
 
@@ -920,7 +928,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
               }
               <div style={{color:"#fff",fontSize:17,fontWeight:700,textAlign:"center",lineHeight:1.25,maxWidth:280}}>{current.title}</div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {current.year&&<span style={S.muted}>{current.year} · {current.type==="tv"?"Series":"Film"}</span>}
+                {current.year&&<span style={S.muted}>{current.year.slice(0,4)} · {current.type==="tv"?"Series":"Film"}</span>}
                 {current.rating&&current.rating!=="0.0"&&<span style={{background:"rgba(249,115,22,0.2)",color:"#f97316",borderRadius:6,padding:"1px 7px",fontSize:11,fontWeight:700}}>⭐ {current.rating}</span>}
               </div>
               {current.overview&&<p style={{color:"rgba(255,255,255,0.48)",fontSize:11,textAlign:"center",lineHeight:1.55,margin:0,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{current.overview}</p>}
@@ -931,6 +939,47 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
                 {current.services.map(s=><span key={s} style={{background:SERVICE_COLORS[s]||"#444",borderRadius:4,padding:"2px 7px",fontSize:9,color:"#fff",fontWeight:600}}>{s}</span>)}
               </div>
             </div>
+            {showDetail&&(
+              <div
+                onClick={e=>e.stopPropagation()}
+                style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(8,8,15,0.97)",borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"0 0 20px 20px",padding:"14px 18px 20px",zIndex:20,maxHeight:"72%",overflowY:"auto"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{color:"#fff",fontWeight:700,fontSize:15,flex:1,lineHeight:1.2}}>{current.title}</div>
+                  <button onClick={()=>setShowDetail(false)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:20,color:"rgba(255,255,255,0.6)",fontSize:16,width:28,height:28,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",marginLeft:8}}>✕</button>
+                </div>
+                {formatReleaseDate(current.release_date||current.year)&&(
+                  <div style={{...S.muted,fontSize:12,marginBottom:8}}>{formatReleaseDate(current.release_date||current.year)}</div>
+                )}
+                {current.overview&&(
+                  <p style={{color:"rgba(255,255,255,0.55)",fontSize:11,lineHeight:1.6,margin:"0 0 10px"}}>{current.overview}</p>
+                )}
+                {current.trailer_url&&(
+                  <a href={current.trailer_url} target="_blank" rel="noreferrer"
+                    style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.4)",borderRadius:8,color:"#f97316",fontSize:12,fontWeight:700,padding:"7px 14px",textDecoration:"none",marginBottom:12}}>
+                    ▶ Watch Trailer
+                  </a>
+                )}
+                {current.cast_members?.length>0&&(
+                  <>
+                    <div style={{...S.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Starring</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {current.cast_members.map((c,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+                          {c.profile_path
+                            ?<img src={c.profile_path} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                            :<div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,0.08)",flexShrink:0}}/>
+                          }
+                          <div>
+                            <div style={{color:"#fff",fontSize:11,fontWeight:600}}>{c.name}</div>
+                            {c.character&&<div style={{...S.muted,fontSize:10}}>{c.character}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <div style={{display:"flex",gap:40,marginTop:18}}>
             <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)"}} onClick={()=>swipe("pass")}>✕</button>
