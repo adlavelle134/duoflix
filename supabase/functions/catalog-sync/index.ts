@@ -1,3 +1,5 @@
+// Page limits determined by performance testing against Supabase free tier CPU limits.
+// 300 movie pages (~6,000 titles) + 60 TV pages (~1,200 titles) completes within budget.
 const TMDB_KEY = Deno.env.get("NEXT_PUBLIC_TMDB_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -59,7 +61,7 @@ Deno.serve(async (_req) => {
   let errors = 0;
 
   // ── Fetch movies (500 pages × 20 = up to 10,000) ──
-  for (let p = 1; p <= 500; p++) {
+  for (let p = 1; p <= 300; p++) {
     try {
       const d = await tmdbGet(`/trending/movie/week?language=en-US&region=US&page=${p}`) as { results?: Array<{
         id: number; title?: string; release_date?: string; genre_ids?: number[];
@@ -87,7 +89,7 @@ Deno.serve(async (_req) => {
   }
 
   // ── Fetch TV shows (100 pages × 20 = up to 2,000) ──
-  for (let p = 1; p <= 100; p++) {
+  for (let p = 1; p <= 60; p++) {
     try {
       const d = await tmdbGet(`/trending/tv/week?language=en-US&region=US&page=${p}`) as { results?: Array<{
         id: number; name?: string; first_air_date?: string; genre_ids?: number[];
