@@ -19,6 +19,39 @@ const SERVICE_COLORS = {
   "Max":"#002BE7","Prime Video":"#00A8E1","Hulu":"#1CE783",
   "Peacock":"#F037A5","Paramount+":"#0064FF","Crunchyroll":"#F47521",
 };
+
+const CHANGELOG = [
+  { date: "March 8, 2026", items: [
+    "Master catalog system rebuilt — 5,700+ titles synced nightly",
+    "Infinite scroll swipe queue",
+    "Release date, trailer links, and cast info added to every title",
+    "Tap a card to see full detail panel",
+  ]},
+  { date: "March 7, 2026", items: [
+    "About, Feedback, and My Movies screens added",
+    "Added Crunchyroll",
+    "Daily digest updates",
+  ]},
+  { date: "March 6, 2026", items: [
+    "Tutorial improvements",
+    "Stats screen added",
+    "Daily digest",
+  ]},
+  { date: "March 5, 2026", items: [
+    "Watched toggle added",
+    "Notifications added",
+    "Profile page added",
+    "Kernel tutorial added for first-time users",
+  ]},
+  { date: "March 4, 2026", items: [
+    "General UI creation",
+    "Database integration",
+    "Deployed live at https://duoflix-iota.vercel.app/",
+  ]},
+  { date: "March 3, 2026", items: [
+    "DuoFlix created",
+  ]},
+];
 // No mock users — real users loaded from Supabase
 
 // ─── SUPABASE HELPERS ─────────────────────────────────────────────────────────
@@ -190,7 +223,7 @@ export default function DuoFlix() {
         setProfile(p);
         // Show tutorial if not completed yet
         if (!p.tutorial_complete) setScreen("tutorial");
-        else setScreen("home");
+        else setScreen("beta");
       }
       else setScreen("setup");
     });
@@ -269,6 +302,7 @@ export default function DuoFlix() {
       onBack={()=>setScreen("stats")}
     />
   );
+  if (screen === "beta") return <BetaWelcomeScreen onContinue={() => setScreen("home")} />;
   if (screen === "about") return (
     <AboutScreen onBack={()=>setScreen("home")}/>
   );
@@ -1624,6 +1658,48 @@ function TutorialScreen({ profile, catalog, onComplete }) {
 }
 
 
+
+// ─── BETA WELCOME SCREEN ──────────────────────────────────────────────────────
+function BetaWelcomeScreen({ onContinue }) {
+  return (
+    <div style={S.page}>
+      <div style={{...S.shell, overflowY:"auto", padding:"28px 20px 40px"}}>
+        {/* Header */}
+        <div style={{textAlign:"center", marginBottom:24}}>
+          <div style={{fontSize:36, marginBottom:8}}>🎬</div>
+          <div style={{...S.badge, marginBottom:8}}>BETA</div>
+          <div style={{...S.h2, fontSize:24, lineHeight:1.3}}>Welcome to DuoFlix Beta</div>
+        </div>
+
+        {/* Disclaimer */}
+        <div style={{background:"rgba(249,115,22,0.08)", border:"1px solid rgba(249,115,22,0.25)", borderRadius:12, padding:"14px 16px", marginBottom:28}}>
+          <p style={{color:"rgba(255,255,255,0.75)", fontSize:13, lineHeight:1.6, margin:0}}>
+            DuoFlix is currently in beta. Features are actively being developed and things may change or break. Thanks for being an early tester!
+          </p>
+        </div>
+
+        {/* Changelog */}
+        <div style={{marginBottom:32}}>
+          <div style={{...S.badge, marginBottom:16}}>WHAT'S NEW</div>
+          {CHANGELOG.map(({ date, items }) => (
+            <div key={date} style={{marginBottom:20}}>
+              <div style={{color:"#f97316", fontSize:12, fontWeight:700, marginBottom:8}}>{date}</div>
+              {items.map((item, i) => (
+                <div key={i} style={{display:"flex", gap:8, marginBottom:5}}>
+                  <span style={{color:"rgba(255,255,255,0.3)", fontSize:12, flexShrink:0}}>–</span>
+                  <span style={{color:"rgba(255,255,255,0.65)", fontSize:12, lineHeight:1.5}}>{item}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <button style={{...S.btn, width:"100%"}} onClick={onContinue}>Let's Go!</button>
+      </div>
+    </div>
+  );
+}
 
 // ─── ABOUT SCREEN ─────────────────────────────────────────────────────────────
 function AboutScreen({ onBack }) {
