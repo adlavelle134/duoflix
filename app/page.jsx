@@ -1039,6 +1039,7 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
 function MatchesScreen({ room, authUser, onBack, onToggleWatched }) {
   const [ratings, setRatings] = useState({});
   const [matchTitles, setMatchTitles] = useState([]);
+  const [selectedMovie, setSelectedMovie] = useState(null);
 
   useEffect(() => {
     if (!room.matchIds?.length) { setMatchTitles([]); return; }
@@ -1083,7 +1084,9 @@ function MatchesScreen({ room, authUser, onBack, onToggleWatched }) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
               {unwatched.map(t=>(
                 <div key={t.id} style={S.matchCard}>
-                  {t.poster?<img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>:<div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>}
+                  <div onClick={()=>setSelectedMovie(t)} style={{cursor:"pointer"}}>
+                    {t.poster?<img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>:<div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>}
+                  </div>
                   <div style={{padding:"8px 8px 10px"}}>
                     <div style={{color:"#fff",fontWeight:600,fontSize:12,textAlign:"center",marginBottom:6,lineHeight:1.3}}>{t.title}</div>
                     <div style={{display:"flex",gap:3,flexWrap:"wrap",justifyContent:"center",marginBottom:6}}>
@@ -1104,7 +1107,7 @@ function MatchesScreen({ room, authUser, onBack, onToggleWatched }) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               {watched.map(t=>(
                 <div key={t.id} style={{...S.matchCard,opacity:0.7}}>
-                  <div style={{position:"relative"}}>
+                  <div style={{position:"relative",cursor:"pointer"}} onClick={()=>setSelectedMovie(t)}>
                     {t.poster?<img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>:<div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>}
                     <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>✅</div>
                   </div>
@@ -1129,6 +1132,49 @@ function MatchesScreen({ room, authUser, onBack, onToggleWatched }) {
           </>}
         </div>
       }
+      {selectedMovie && (
+        <div onClick={() => setSelectedMovie(null)}
+          style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:"flex-end"}}>
+          <div onClick={e=>e.stopPropagation()}
+            style={{width:"100%",maxWidth:430,margin:"0 auto",background:"rgba(8,8,15,0.97)",borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"14px 18px 32px",maxHeight:"72vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{color:"#fff",fontWeight:700,fontSize:15,flex:1,lineHeight:1.2}}>{selectedMovie.title}</div>
+              <button onClick={() => setSelectedMovie(null)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:20,color:"rgba(255,255,255,0.6)",fontSize:16,width:28,height:28,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",marginLeft:8}}>✕</button>
+            </div>
+            {formatReleaseDate(selectedMovie.release_date||selectedMovie.year)&&(
+              <div style={{...S.muted,fontSize:12,marginBottom:8}}>{formatReleaseDate(selectedMovie.release_date||selectedMovie.year)}</div>
+            )}
+            {selectedMovie.overview&&(
+              <p style={{color:"rgba(255,255,255,0.55)",fontSize:11,lineHeight:1.6,margin:"0 0 10px"}}>{selectedMovie.overview}</p>
+            )}
+            {selectedMovie.trailer_url&&(
+              <a href={selectedMovie.trailer_url} target="_blank" rel="noreferrer"
+                style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.4)",borderRadius:8,color:"#f97316",fontSize:12,fontWeight:700,padding:"7px 14px",textDecoration:"none",marginBottom:12}}>
+                ▶ Watch Trailer
+              </a>
+            )}
+            {selectedMovie.cast_members?.length>0&&(
+              <>
+                <div style={{...S.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Starring</div>
+                <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  {selectedMovie.cast_members.map((c,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+                      {c.profile_path
+                        ?<img src={c.profile_path} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                        :<div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,0.08)",flexShrink:0}}/>
+                      }
+                      <div>
+                        <div style={{color:"#fff",fontSize:11,fontWeight:600}}>{c.name}</div>
+                        {c.character&&<div style={{...S.muted,fontSize:10}}>{c.character}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div></div>
   );
 }
@@ -1801,6 +1847,7 @@ function MyMoviesScreen({ authUser, onBack }) {
   const [ratings, setRatings]         = useState({});
   const [loading, setLoading]         = useState(true);
   const [filter, setFilter]           = useState("all");
+  const [selectedMovie, setSelectedMovie] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -1816,7 +1863,7 @@ function MyMoviesScreen({ authUser, onBack }) {
       const likedIds = [...new Set((swipes||[]).map(s => s.title_id))];
       if (likedIds.length > 0) {
         const { data: catalogData } = await supabase.from("catalog")
-          .select("id,type,title,year,genres,poster,backdrop,overview,rating,services")
+          .select("id,type,title,year,genres,poster,backdrop,overview,rating,services,release_date,trailer_url,cast_members")
           .in("id", likedIds);
         const titles = (catalogData || []).sort((a,b) => a.title.localeCompare(b.title));
         setLikedTitles(titles);
@@ -1881,7 +1928,7 @@ function MyMoviesScreen({ authUser, onBack }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             {filtered.map(t=>(
               <div key={t.id} style={{...S.matchCard,opacity:watched.has(t.id)?0.55:1}}>
-                <div style={{position:"relative"}}>
+                <div style={{position:"relative",cursor:"pointer"}} onClick={()=>setSelectedMovie(t)}>
                   {t.poster
                     ? <img src={t.poster} style={{width:"100%",height:165,objectFit:"cover",borderRadius:"10px 10px 0 0"}}/>
                     : <div style={{width:"100%",height:165,background:"rgba(255,255,255,0.06)",borderRadius:"10px 10px 0 0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🎬</div>
@@ -1918,6 +1965,49 @@ function MyMoviesScreen({ authUser, onBack }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {selectedMovie && (
+        <div onClick={() => setSelectedMovie(null)}
+          style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:"flex-end"}}>
+          <div onClick={e=>e.stopPropagation()}
+            style={{width:"100%",maxWidth:430,margin:"0 auto",background:"rgba(8,8,15,0.97)",borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"14px 18px 32px",maxHeight:"72vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{color:"#fff",fontWeight:700,fontSize:15,flex:1,lineHeight:1.2}}>{selectedMovie.title}</div>
+              <button onClick={() => setSelectedMovie(null)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:20,color:"rgba(255,255,255,0.6)",fontSize:16,width:28,height:28,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",marginLeft:8}}>✕</button>
+            </div>
+            {formatReleaseDate(selectedMovie.release_date||selectedMovie.year)&&(
+              <div style={{...S.muted,fontSize:12,marginBottom:8}}>{formatReleaseDate(selectedMovie.release_date||selectedMovie.year)}</div>
+            )}
+            {selectedMovie.overview&&(
+              <p style={{color:"rgba(255,255,255,0.55)",fontSize:11,lineHeight:1.6,margin:"0 0 10px"}}>{selectedMovie.overview}</p>
+            )}
+            {selectedMovie.trailer_url&&(
+              <a href={selectedMovie.trailer_url} target="_blank" rel="noreferrer"
+                style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.4)",borderRadius:8,color:"#f97316",fontSize:12,fontWeight:700,padding:"7px 14px",textDecoration:"none",marginBottom:12}}>
+                ▶ Watch Trailer
+              </a>
+            )}
+            {selectedMovie.cast_members?.length>0&&(
+              <>
+                <div style={{...S.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Starring</div>
+                <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                  {selectedMovie.cast_members.map((c,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+                      {c.profile_path
+                        ?<img src={c.profile_path} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                        :<div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,0.08)",flexShrink:0}}/>
+                      }
+                      <div>
+                        <div style={{color:"#fff",fontSize:11,fontWeight:600}}>{c.name}</div>
+                        {c.character&&<div style={{...S.muted,fontSize:10}}>{c.character}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
