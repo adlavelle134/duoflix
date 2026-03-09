@@ -21,6 +21,13 @@ const SERVICE_COLORS = {
 };
 
 const CHANGELOG = [
+  { date: "March 9, 2026", items: [
+    "UI Changes",
+    "Stats moved to Profile page",
+    "My Movies option added",
+    "\"Swipe My Movies\" option added for solo rooms",
+    "Updated catalog with 1200+ movies/shows from Crunchyroll",
+  ]},
   { date: "March 8, 2026", items: [
     "Master catalog system rebuilt — 5,700+ titles synced nightly",
     "Infinite scroll swipe queue",
