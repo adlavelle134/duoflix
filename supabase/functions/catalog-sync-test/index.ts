@@ -152,66 +152,63 @@ Deno.serve(async (req) => {
       }), { headers: { "Content-Type": "application/json" } });
     }
 
-    // ── Phase 2: Provider lookups ────────────────────────────────────────────
-    const providerStart = Date.now();
+    // ── Phase 2: Provider + Trailer + Cast (parallel per title) ─────────────
     const BATCH_SIZE = 20;
+    let providerMs = 0, trailerMs = 0, castMs = 0;
     for (let i = 0; i < all.length; i += BATCH_SIZE) {
       const batch = all.slice(i, i + BATCH_SIZE);
       await Promise.all(batch.map(async (item) => {
-        try {
-          const path = item.type === "movie"
-            ? `/movie/${item.tmdb_id}/watch/providers`
-            : `/tv/${item.tmdb_id}/watch/providers`;
-          const d = await tmdbGet(path) as {
-            results?: { US?: { flatrate?: Array<{ provider_id: number }> } };
-          };
-          item.services = (d.results?.US?.flatrate ?? [])
-            .map((p) => PROVIDER_MAP[p.provider_id])
-            .filter((x): x is string => !!x);
-        } catch (_e) { errors++; }
+        await Promise.all([
+          // Provider
+          (async () => {
+            const t0 = Date.now();
+            try {
+              const path = item.type === "movie"
+                ? `/movie/${item.tmdb_id}/watch/providers`
+                : `/tv/${item.tmdb_id}/watch/providers`;
+              const d = await tmdbGet(path) as { results?: { US?: { flatrate?: Array<{ provider_id: number }> } } };
+              item.services = (d.results?.US?.flatrate ?? [])
+                .map((p) => PROVIDER_MAP[p.provider_id])
+                .filter((x): x is string => !!x);
+            } catch (_e) { errors++; }
+            providerMs += Date.now() - t0;
+          })(),
+          // Trailer
+          (async () => {
+            const t0 = Date.now();
+            try {
+              const path = item.type === "movie"
+                ? `/movie/${item.tmdb_id}/videos`
+                : `/tv/${item.tmdb_id}/videos`;
+              const d = await tmdbGet(path) as { results?: Array<{ type: string; site: string; key: string }> };
+              const trailer = (d.results ?? []).find(v => v.type === "Trailer" && v.site === "YouTube");
+              item.trailer_url = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
+            } catch (_e) { errors++; }
+            trailerMs += Date.now() - t0;
+          })(),
+          // Cast
+          (async () => {
+            const t0 = Date.now();
+            try {
+              const path = item.type === "movie"
+                ? `/movie/${item.tmdb_id}/credits`
+                : `/tv/${item.tmdb_id}/credits`;
+              const d = await tmdbGet(path) as { cast?: Array<{ name: string; character: string; profile_path: string | null }> };
+              item.cast_members = (d.cast ?? []).slice(0, 5).map(c => ({
+                name: c.name,
+                character: c.character,
+                profile_path: c.profile_path ? IMG_W185 + c.profile_path : null,
+              }));
+            } catch (_e) { errors++; }
+            castMs += Date.now() - t0;
+          })(),
+        ]);
       }));
       if (i + BATCH_SIZE < all.length) await delay(500);
     }
-    const providerDuration = Date.now() - providerStart;
-
-    // ── Phase 3: Trailer lookups ─────────────────────────────────────────────
-    const trailerStart = Date.now();
-    for (let i = 0; i < all.length; i += BATCH_SIZE) {
-      const batch = all.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (item) => {
-        try {
-          const path = item.type === "movie"
-            ? `/movie/${item.tmdb_id}/videos`
-            : `/tv/${item.tmdb_id}/videos`;
-          const d = await tmdbGet(path) as { results?: Array<{ type: string; site: string; key: string }> };
-          const trailer = (d.results ?? []).find(v => v.type === "Trailer" && v.site === "YouTube");
-          item.trailer_url = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
-        } catch (_e) { errors++; }
-      }));
-      if (i + BATCH_SIZE < all.length) await delay(500);
-    }
-    const trailerDuration = Date.now() - trailerStart;
-
-    // ── Phase 4: Cast lookups ────────────────────────────────────────────────
-    const castStart = Date.now();
-    for (let i = 0; i < all.length; i += BATCH_SIZE) {
-      const batch = all.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (item) => {
-        try {
-          const path = item.type === "movie"
-            ? `/movie/${item.tmdb_id}/credits`
-            : `/tv/${item.tmdb_id}/credits`;
-          const d = await tmdbGet(path) as { cast?: Array<{ name: string; character: string; profile_path: string | null }> };
-          item.cast_members = (d.cast ?? []).slice(0, 5).map(c => ({
-            name: c.name,
-            character: c.character,
-            profile_path: c.profile_path ? IMG_W185 + c.profile_path : null,
-          }));
-        } catch (_e) { errors++; }
-      }));
-      if (i + BATCH_SIZE < all.length) await delay(500);
-    }
-    const castDuration = Date.now() - castStart;
+    const providerDuration = providerMs;
+    const trailerDuration = trailerMs;
+    const castDuration = castMs;
 
     // ── Phase 5: Upsert ──────────────────────────────────────────────────────
     const upsertStart = Date.now();
