@@ -50,8 +50,18 @@ async function upsertBatch(batch: unknown[]): Promise<string | null> {
   return null;
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
   try {
+
+  let moviePageStart = 1, moviePageEnd = 130;
+  let tvPageStart = 1,    tvPageEnd = 26;
+  try {
+    const body = await req.json();
+    if (body.movie_page_start != null) moviePageStart = Number(body.movie_page_start);
+    if (body.movie_page_end   != null) moviePageEnd   = Number(body.movie_page_end);
+    if (body.tv_page_start    != null) tvPageStart    = Number(body.tv_page_start);
+    if (body.tv_page_end      != null) tvPageEnd      = Number(body.tv_page_end);
+  } catch (_e) { /* no body or non-JSON — use defaults */ }
 
   const all: Array<{
     id: string; tmdb_id: number; type: string; title: string; year: string;
@@ -65,7 +75,7 @@ Deno.serve(async (_req) => {
   let errors = 0;
 
   // ── Fetch movies (500 pages × 20 = up to 10,000) ──
-  for (let p = 1; p <= 300; p++) {
+  for (let p = moviePageStart; p <= moviePageEnd; p++) {
     try {
       const d = await tmdbGet(`/trending/movie/week?language=en-US&region=US&page=${p}`) as { results?: Array<{
         id: number; title?: string; release_date?: string; genre_ids?: number[];
@@ -96,7 +106,7 @@ Deno.serve(async (_req) => {
   }
 
   // ── Fetch TV shows (100 pages × 20 = up to 2,000) ──
-  for (let p = 1; p <= 60; p++) {
+  for (let p = tvPageStart; p <= tvPageEnd; p++) {
     try {
       const d = await tmdbGet(`/trending/tv/week?language=en-US&region=US&page=${p}`) as { results?: Array<{
         id: number; name?: string; first_air_date?: string; genre_ids?: number[];
@@ -191,7 +201,9 @@ Deno.serve(async (_req) => {
   }
 
   return new Response(
-    JSON.stringify({ inserted, total: all.length, errors }),
+    JSON.stringify({ inserted, total: all.length, errors,
+      movie_page_start: moviePageStart, movie_page_end: moviePageEnd,
+      tv_page_start: tvPageStart, tv_page_end: tvPageEnd }),
     { headers: { "Content-Type": "application/json" } },
   );
   } catch (e) {

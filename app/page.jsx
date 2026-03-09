@@ -942,6 +942,8 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
             {showDetail&&(
               <div
                 onClick={e=>e.stopPropagation()}
+                onMouseDown={e=>e.stopPropagation()} onMouseUp={e=>e.stopPropagation()}
+                onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()}
                 style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(8,8,15,0.97)",borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"0 0 20px 20px",padding:"14px 18px 20px",zIndex:20,maxHeight:"72%",overflowY:"auto"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   <div style={{color:"#fff",fontWeight:700,fontSize:15,flex:1,lineHeight:1.2}}>{current.title}</div>
