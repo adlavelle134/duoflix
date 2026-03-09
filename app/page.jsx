@@ -201,6 +201,7 @@ export default function DuoFlix() {
   const [activeRoom, setActiveRoom] = useState(null);
   const [rooms, setRooms]         = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [soloFilters, setSoloFilters] = useState(null);
 
   // 1. Check Supabase session on mount
   useEffect(() => {
@@ -303,6 +304,14 @@ export default function DuoFlix() {
     <MyMoviesScreen
       authUser={authUser}
       onBack={()=>setScreen("home")}
+      onSoloSwipe={()=>{ setSoloFilters({ services: profile?.services||[], contentType:"both", genres:[] }); setScreen("soloswipe"); }}
+    />
+  );
+  if (screen === "soloswipe" && soloFilters) return (
+    <SoloSwipeScreen
+      authUser={authUser}
+      filters={soloFilters}
+      onBack={()=>setScreen("mymovies")}
     />
   );
   if (screen === "beta") return <BetaWelcomeScreen onContinue={() => setScreen("home")} />;
@@ -577,9 +586,9 @@ function HomeScreen({ profile, rooms, notifications, onClearNotifications, onSea
             </button>
             {showMenu&&(
               <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,overflow:"hidden",zIndex:50,minWidth:160}}>
-                <button style={S.menuItem} onClick={()=>{onAbout();setShowMenu(false);}}>🎬 About DuoFlix</button>
                 <button style={S.menuItem} onClick={()=>{onViewProfile();setShowMenu(false);}}>👤 Profile</button>
                 <button style={S.menuItem} onClick={()=>{onMyMovies();setShowMenu(false);}}>🎥 My Movies</button>
+                <button style={S.menuItem} onClick={()=>{onAbout();setShowMenu(false);}}>🎬 About DuoFlix</button>
                 <button style={S.menuItem} onClick={()=>{onRestartTutorial();setShowMenu(false);}}>🍿 Kernel's Tutorial</button>
                 <button style={S.menuItem} onClick={()=>{onFeedback();setShowMenu(false);}}>💬 Submit Feedback</button>
                 <button style={{...S.menuItem,color:"#ef4444"}} onClick={onSignOut}>🚪 Sign Out</button>
@@ -1844,8 +1853,329 @@ function FeedbackScreen({ authUser, profile, onBack }) {
   );
 }
 
+// ─── SOLO SETUP SCREEN ────────────────────────────────────────────────────────
+function SoloSetupScreen({ authUser, profile, onBack, onStart }) {
+  const [services, setServices]             = useState(profile?.services || []);
+  const [contentType, setContentType]       = useState("both");
+  const [selectedGenres, setSelectedGenres] = useState([]);
+  const toggleService = (s) => setServices(p => p.includes(s) ? p.filter(x=>x!==s) : [...p,s]);
+  const toggleGenre   = (g) => setSelectedGenres(p => p.includes(g) ? p.filter(x=>x!==g) : [...p,g]);
+
+  return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={onBack}>←</button>
+        <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Solo Swipe Setup</div>
+        <div style={{width:40}}/>
+      </header>
+
+      <div style={{overflowY:"auto",flex:1,paddingBottom:20}}>
+        <div style={{...S.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Streaming Services</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
+          {ALL_SERVICES.map(s=>(
+            <button key={s} onClick={()=>toggleService(s)} style={{...S.chip,
+              background:services.includes(s)?SERVICE_COLORS[s]:"rgba(255,255,255,0.07)",
+              borderColor:services.includes(s)?SERVICE_COLORS[s]:"rgba(255,255,255,0.15)",
+              color:services.includes(s)?"#fff":"#999"
+            }}>{s}</button>
+          ))}
+        </div>
+
+        <div style={{...S.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Content Type</div>
+        <div style={{display:"flex",gap:6,marginBottom:20}}>
+          {[["both","🎬 Both"],["movie","🎥 Movies"],["tv","📺 TV Shows"]].map(([val,label])=>(
+            <button key={val} onClick={()=>setContentType(val)}
+              style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${contentType===val?"#f97316":"rgba(255,255,255,0.12)"}`,background:contentType===val?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:contentType===val?"#f97316":"#999",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{...S.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Genres <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:24}}>
+          {ALL_GENRES.map(g=>(
+            <button key={g} onClick={()=>toggleGenre(g)}
+              style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${selectedGenres.includes(g)?"#f97316":"rgba(255,255,255,0.12)"}`,background:selectedGenres.includes(g)?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:selectedGenres.includes(g)?"#f97316":"#999",fontSize:11,cursor:"pointer"}}>
+              {g}
+            </button>
+          ))}
+        </div>
+
+        <button style={{...S.btn,width:"100%",opacity:services.length?1:0.35}}
+          onClick={()=>services.length&&onStart({services,contentType,genres:selectedGenres})}>
+          Start Swiping →
+        </button>
+        {!services.length&&<div style={{...S.muted,fontSize:11,textAlign:"center",marginTop:8}}>Select at least one service to continue</div>}
+      </div>
+    </div></div>
+  );
+}
+
+// ─── SOLO SWIPE SCREEN ────────────────────────────────────────────────────────
+function SoloSwipeScreen({ authUser, filters, onBack }) {
+  const [likedIds, setLikedIds]             = useState(new Set());
+  const [skippedIds, setSkippedIds]         = useState(new Set());
+  const [titles, setTitles]                 = useState([]);
+  const [catalogPage, setCatalogPage]       = useState(0);
+  const [exhausted, setExhausted]           = useState(false);
+  const [loadingMore, setLoadingMore]       = useState(false);
+  const [dragX, setDragX]                   = useState(0);
+  const [dragging, setDragging]             = useState(false);
+  const [exiting, setExiting]               = useState(null);
+  const [showDetail, setShowDetail]         = useState(false);
+  const [loadingInit, setLoadingInit]       = useState(true);
+  const [showFilters, setShowFilters]       = useState(false);
+  const [services, setServices]             = useState(filters.services || []);
+  const [contentType, setContentType]       = useState(filters.contentType || "both");
+  const [selectedGenres, setSelectedGenres] = useState(filters.genres || []);
+  const dragStart  = useRef(null);
+  const exitingRef = useRef(false);
+  const loadingRef = useRef(false);
+
+  const PAGE_SIZE = 50;
+
+  const loadMore = async (currentPage) => {
+    if (loadingRef.current || exhausted) return;
+    loadingRef.current = true;
+    setLoadingMore(true);
+    const cutoff = new Date(Date.now() - 14*24*60*60*1000).toISOString();
+    let query = supabase.from("catalog")
+      .select("id,type,title,year,genres,poster,backdrop,overview,rating,services,popularity,release_date,trailer_url,cast_members")
+      .order("popularity", { ascending: false })
+      .gte("last_updated", cutoff)
+      .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+    if (services?.length > 0)
+      query = query.overlaps("services", services);
+    if (contentType === "movie") query = query.eq("type", "movie");
+    if (contentType === "tv")    query = query.eq("type", "tv");
+    const { data } = await query;
+    if (!data || data.length < PAGE_SIZE) setExhausted(true);
+    setTitles(prev => [...prev, ...(data||[])]);
+    setCatalogPage(currentPage + 1);
+    loadingRef.current = false;
+    setLoadingMore(false);
+  };
+
+  useEffect(() => {
+    async function init() {
+      const { data } = await supabase.from("swipes")
+        .select("title_id").eq("user_id", authUser.id).eq("direction", "like");
+      setLikedIds(new Set((data||[]).map(s => s.title_id)));
+      setLoadingInit(false);
+      loadMore(0);
+    }
+    init();
+  }, []);
+
+  const resetCatalog = () => {
+    setTitles([]);
+    setCatalogPage(0);
+    setExhausted(false);
+    setSkippedIds(new Set());
+    loadingRef.current = false;
+  };
+
+  const handleServiceToggle = (s) => {
+    setServices(p => p.includes(s) ? p.filter(x=>x!==s) : [...p,s]);
+    resetCatalog();
+  };
+
+  const handleContentType = (val) => {
+    setContentType(val);
+    resetCatalog();
+  };
+
+  const queue = useMemo(() =>
+    titles.filter(t => {
+      if (likedIds.has(t.id)) return false;
+      if (skippedIds.has(t.id)) return false;
+      if (contentType==="movie" && t.type!=="movie") return false;
+      if (contentType==="tv"    && t.type!=="tv")    return false;
+      if (selectedGenres?.length > 0 && !t.genres?.some(g => selectedGenres.includes(g))) return false;
+      return true;
+    }), [titles, likedIds, skippedIds, contentType, selectedGenres]);
+
+  const current  = queue[0];
+  const done     = !current && exhausted && !loadingInit;
+  const unswiped = queue.length;
+
+  useEffect(() => {
+    if (unswiped < 15 && !exhausted && !loadingMore && !loadingInit) loadMore(catalogPage);
+  }, [unswiped, exhausted, loadingMore, loadingInit, catalogPage]);
+
+  const swipe = async (dir) => {
+    if (!current || exitingRef.current) return;
+    setShowDetail(false);
+    exitingRef.current = true;
+    setExiting(dir);
+    if (dir === "like") {
+      setLikedIds(prev => new Set([...prev, current.id]));
+      await supabase.from("swipes").upsert({
+        user_id: authUser.id,
+        title_id: current.id,
+        direction: "like",
+        room_id: "00000000-0000-0000-0000-000000000000",
+      });
+    } else {
+      setSkippedIds(prev => new Set([...prev, current.id]));
+    }
+    setTimeout(() => { setExiting(null); setDragX(0); exitingRef.current = false; }, 320);
+  };
+
+  const onDown = (e) => { if(exitingRef.current)return; dragStart.current=e.touches?.[0]?.clientX??e.clientX; setDragging(true); };
+  const onMove = (e) => { if(!dragging||dragStart.current==null||exitingRef.current)return; setDragX((e.touches?.[0]?.clientX??e.clientX)-dragStart.current); };
+  const onUp   = () => { if(!dragging)return; setDragging(false); dragStart.current=null; if(Math.abs(dragX)>90){swipe(dragX>0?"like":"pass");}else{if(Math.abs(dragX)<5)setShowDetail(p=>!p); setDragX(0);} };
+
+  const rot=dragX*0.07, likeOp=Math.max(0,Math.min(dragX/80,1)), passOp=Math.max(0,Math.min(-dragX/80,1));
+
+  return (
+    <div style={S.page}><div style={S.shell}>
+      <header style={S.hdr}>
+        <button style={S.back} onClick={onBack}>←</button>
+        <div style={{color:"#fff",fontWeight:700,fontSize:14}}>Solo Swipe</div>
+        <button style={{...S.matchBadge,background:"rgba(255,255,255,0.08)",borderColor:"rgba(255,255,255,0.15)",color:"#fff"}} onClick={()=>setShowFilters(p=>!p)}>⚙️</button>
+      </header>
+
+      {showFilters&&(
+        <div style={{background:"rgba(20,20,32,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"16px",marginBottom:12}}>
+          <div style={{...S.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Services</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+            {ALL_SERVICES.map(s=>(
+              <button key={s} onClick={()=>handleServiceToggle(s)} style={{...S.chip,fontSize:11,padding:"3px 10px",
+                background:services.includes(s)?SERVICE_COLORS[s]:"rgba(255,255,255,0.07)",
+                borderColor:services.includes(s)?SERVICE_COLORS[s]:"rgba(255,255,255,0.15)",
+                color:services.includes(s)?"#fff":"#999"
+              }}>{s}</button>
+            ))}
+          </div>
+          <div style={{...S.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Content Type</div>
+          <div style={{display:"flex",gap:6,marginBottom:12}}>
+            {[["both","🎬 Both"],["movie","🎥 Movies"],["tv","📺 TV Shows"]].map(([val,label])=>(
+              <button key={val} onClick={()=>handleContentType(val)}
+                style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1px solid ${contentType===val?"#f97316":"rgba(255,255,255,0.12)"}`,background:contentType===val?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:contentType===val?"#f97316":"#999",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <div style={{...S.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Genres {selectedGenres.length>0&&<span style={{color:"#f97316"}}>({selectedGenres.length})</span>}</div>
+            {selectedGenres.length>0&&<button onClick={()=>setSelectedGenres([])} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:11,cursor:"pointer"}}>Clear</button>}
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+            {ALL_GENRES.map(g=>(
+              <button key={g} onClick={()=>setSelectedGenres(p=>p.includes(g)?p.filter(x=>x!==g):[...p,g])}
+                style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${selectedGenres.includes(g)?"#f97316":"rgba(255,255,255,0.12)"}`,background:selectedGenres.includes(g)?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:selectedGenres.includes(g)?"#f97316":"#999",fontSize:11,cursor:"pointer"}}>
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={S.progBar}><div style={{...S.progFill,width:`${Math.min(likedIds.size/Math.max(likedIds.size+unswiped,1)*100,100)}%`}}/></div>
+
+      {loadingInit ? (
+        <div style={S.empty}><div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading titles...</div></div>
+      ) : done ? (
+        <div style={S.empty}>
+          <div style={{fontSize:56}}>🎉</div>
+          <h3 style={{color:"#fff",margin:0}}>All done!</h3>
+          <p style={S.muted}>You've swiped through all matching titles.</p>
+          <button style={S.btn} onClick={onBack}>Back to My Movies</button>
+        </div>
+      ) : !current ? (
+        <div style={S.empty}><div style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading titles...</div></div>
+      ) : (
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",paddingTop:8}}>
+          <div
+            style={{...S.card,
+              transform:exiting?`translateX(${exiting==="like"?450:-450}px) rotate(${exiting==="like"?25:-25}deg)`:`translateX(${dragX}px) rotate(${rot}deg)`,
+              transition:exiting?"transform 0.32s ease":dragging?"none":"transform 0.2s ease",
+              cursor:dragging?"grabbing":"grab",
+            }}
+            onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+            onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+          >
+            {current.backdrop
+              ?<div style={{position:"absolute",inset:0,backgroundImage:`url(${current.backdrop})`,backgroundSize:"cover",backgroundPosition:"center",filter:"blur(22px) brightness(0.28)",transform:"scale(1.1)",borderRadius:20}}/>
+              :<div style={{position:"absolute",inset:0,background:"rgba(14,14,26,1)",borderRadius:20}}/>
+            }
+            <div style={{...S.likeStamp,opacity:likeOp}}>WATCH</div>
+            <div style={{...S.nopeStamp,opacity:passOp}}>SKIP</div>
+            <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 20px 18px",gap:9,width:"100%",boxSizing:"border-box"}}>
+              {current.poster
+                ?<img src={current.poster} alt={current.title} style={{width:158,height:237,objectFit:"cover",borderRadius:12,boxShadow:"0 12px 48px rgba(0,0,0,0.8)"}} draggable={false}/>
+                :<div style={{width:158,height:237,borderRadius:12,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:60}}>🎬</div>
+              }
+              <div style={{color:"#fff",fontSize:17,fontWeight:700,textAlign:"center",lineHeight:1.25,maxWidth:280}}>{current.title}</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {current.year&&<span style={S.muted}>{current.year.slice(0,4)} · {current.type==="tv"?"Series":"Film"}</span>}
+                {current.rating&&current.rating!=="0.0"&&<span style={{background:"rgba(249,115,22,0.2)",color:"#f97316",borderRadius:6,padding:"1px 7px",fontSize:11,fontWeight:700}}>⭐ {current.rating}</span>}
+              </div>
+              {current.overview&&<p style={{color:"rgba(255,255,255,0.48)",fontSize:11,textAlign:"center",lineHeight:1.55,margin:0,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{current.overview}</p>}
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"center"}}>
+                {(current.genres||[]).map(g=><span key={g} style={S.genre}>{g}</span>)}
+              </div>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"center"}}>
+                {(current.services||[]).map(s=><span key={s} style={{background:SERVICE_COLORS[s]||"#444",borderRadius:4,padding:"2px 7px",fontSize:9,color:"#fff",fontWeight:600}}>{s}</span>)}
+              </div>
+            </div>
+            {showDetail&&(
+              <div
+                onClick={e=>e.stopPropagation()}
+                onMouseDown={e=>e.stopPropagation()} onMouseUp={e=>e.stopPropagation()}
+                onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()}
+                style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(8,8,15,0.97)",borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"0 0 20px 20px",padding:"14px 18px 20px",zIndex:20,maxHeight:"72%",overflowY:"auto"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{color:"#fff",fontWeight:700,fontSize:15,flex:1,lineHeight:1.2}}>{current.title}</div>
+                  <button onClick={()=>setShowDetail(false)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:20,color:"rgba(255,255,255,0.6)",fontSize:16,width:28,height:28,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",marginLeft:8}}>✕</button>
+                </div>
+                {formatReleaseDate(current.release_date||current.year)&&(
+                  <div style={{...S.muted,fontSize:12,marginBottom:8}}>{formatReleaseDate(current.release_date||current.year)}</div>
+                )}
+                {current.overview&&(
+                  <p style={{color:"rgba(255,255,255,0.55)",fontSize:11,lineHeight:1.6,margin:"0 0 10px"}}>{current.overview}</p>
+                )}
+                {current.trailer_url&&(
+                  <a href={current.trailer_url} target="_blank" rel="noreferrer"
+                    style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.4)",borderRadius:8,color:"#f97316",fontSize:12,fontWeight:700,padding:"7px 14px",textDecoration:"none",marginBottom:12}}>
+                    ▶ Watch Trailer
+                  </a>
+                )}
+                {current.cast_members?.length>0&&(
+                  <>
+                    <div style={{...S.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Starring</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {current.cast_members.map((c,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+                          {c.profile_path
+                            ?<img src={c.profile_path} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                            :<div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,255,255,0.08)",flexShrink:0}}/>
+                          }
+                          <div>
+                            <div style={{color:"#fff",fontSize:11,fontWeight:600}}>{c.name}</div>
+                            {c.character&&<div style={{...S.muted,fontSize:10}}>{c.character}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:40,marginTop:18}}>
+            <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)"}} onClick={()=>swipe("pass")}>✕</button>
+            <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)"}} onClick={()=>swipe("like")}>♥</button>
+          </div>
+        </div>
+      )}
+    </div></div>
+  );
+}
+
 // ─── MY MOVIES SCREEN ─────────────────────────────────────────────────────────
-function MyMoviesScreen({ authUser, onBack }) {
+function MyMoviesScreen({ authUser, onBack, onSoloSwipe }) {
   const [likedTitles, setLikedTitles] = useState([]);
   const [watched, setWatched]         = useState(new Set());
   const [ratings, setRatings]         = useState({});
@@ -1909,6 +2239,9 @@ function MyMoviesScreen({ authUser, onBack }) {
         <div style={S.logo}>My Movies</div>
         <div style={{width:40}}/>
       </header>
+      <button onClick={onSoloSwipe} style={{...S.btn,width:"100%",marginBottom:16,fontSize:14}}>
+        🎬 Swipe My Movies
+      </button>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         {[["all","All"],["unwatched","Unwatched"],["watched","Watched ✅"]].map(([val,label])=>(
           <button key={val} onClick={()=>setFilter(val)} style={{
