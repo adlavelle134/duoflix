@@ -398,6 +398,12 @@ export default function DuoFlix() {
   );
 }
 
+function formatReleaseDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 // ─── SPINNER ──────────────────────────────────────────────────────────────────
 function Spinner() {
   return (
@@ -859,11 +865,6 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const onMove=(e)=>{ if(!dragging||dragStart.current==null||exitingRef.current)return; setDragX((e.touches?.[0]?.clientX??e.clientX)-dragStart.current); };
   const onUp=()=>{ if(!dragging)return; setDragging(false); dragStart.current=null; if(Math.abs(dragX)>90){swipe(dragX>0?"like":"pass");}else{if(Math.abs(dragX)<5)setShowDetail(p=>!p); setDragX(0);} };
 
-  const formatReleaseDate = (dateStr) => {
-    if (!dateStr) return null;
-    const d = new Date(dateStr + "T12:00:00");
-    return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  };
 
   const rot=dragX*0.07, likeOp=Math.max(0,Math.min(dragX/80,1)), passOp=Math.max(0,Math.min(-dragX/80,1));
 
