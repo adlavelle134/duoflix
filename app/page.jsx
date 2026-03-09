@@ -1966,8 +1966,11 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
   useEffect(() => {
     async function init() {
       const { data } = await supabase.from("swipes")
-        .select("title_id").eq("user_id", authUser.id).eq("direction", "like");
-      setLikedIds(new Set((data||[]).map(s => s.title_id)));
+        .select("title_id, direction")
+        .eq("user_id", authUser.id)
+        .eq("room_id", "00000000-0000-0000-0000-000000000000");
+      setLikedIds(new Set((data||[]).filter(s => s.direction === "like").map(s => s.title_id)));
+      setSkippedIds(new Set((data||[]).filter(s => s.direction === "pass").map(s => s.title_id)));
       setLoadingInit(false);
       loadMore(0);
     }
@@ -1980,6 +1983,20 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
     setExhausted(false);
     setSkippedIds(new Set());
     loadingRef.current = false;
+  };
+
+  const resetSwipes = async () => {
+    await supabase.from("swipes")
+      .delete()
+      .eq("user_id", authUser.id)
+      .eq("room_id", "00000000-0000-0000-0000-000000000000");
+    setLikedIds(new Set());
+    setSkippedIds(new Set());
+    setTitles([]);
+    setCatalogPage(0);
+    setExhausted(false);
+    loadingRef.current = false;
+    loadMore(0);
   };
 
   const handleServiceToggle = (s) => {
@@ -2025,6 +2042,12 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
       });
     } else {
       setSkippedIds(prev => new Set([...prev, current.id]));
+      await supabase.from("swipes").upsert({
+        user_id: authUser.id,
+        title_id: current.id,
+        direction: "pass",
+        room_id: "00000000-0000-0000-0000-000000000000",
+      });
     }
     setTimeout(() => { setExiting(null); setDragX(0); exitingRef.current = false; }, 320);
   };
@@ -2075,6 +2098,14 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
                 {g}
               </button>
             ))}
+          </div>
+          <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,0.08)",paddingTop:12}}>
+            <button
+              onClick={resetSwipes}
+              style={{width:"100%",padding:"9px",borderRadius:9,border:"1px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.08)",color:"#ef4444",fontSize:12,fontWeight:700,cursor:"pointer"}}
+            >
+              Reset Swipes
+            </button>
           </div>
         </div>
       )}
