@@ -1678,6 +1678,9 @@ function BetaWelcomeScreen({ onContinue }) {
           </p>
         </div>
 
+        {/* CTA */}
+        <button style={{...S.btn, width:"100%", marginBottom:28}} onClick={onContinue}>Let's Go!</button>
+
         {/* Changelog */}
         <div style={{marginBottom:32}}>
           <div style={{...S.badge, marginBottom:16}}>WHAT'S NEW</div>
@@ -1693,9 +1696,6 @@ function BetaWelcomeScreen({ onContinue }) {
             </div>
           ))}
         </div>
-
-        {/* CTA */}
-        <button style={{...S.btn, width:"100%"}} onClick={onContinue}>Let's Go!</button>
       </div>
     </div>
   );
