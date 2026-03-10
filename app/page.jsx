@@ -21,6 +21,11 @@ const SERVICE_COLORS = {
 };
 
 const CHANGELOG = [
+  { date: "March 10, 2026", items: [
+    "\"New Releases\" filter on room settings — shows only titles from the last 3 months",
+    "\"Reset Swipes\" button on room settings — clear your previous decisions and start fresh",
+    "Tutorial updates",
+  ]},
   { date: "March 9, 2026", items: [
     "UI Changes",
     "Stats moved to Profile page",
