@@ -351,6 +351,7 @@ export default function DuoFlix() {
   );
   if (screen === "swipe" && activeRoom) return (
     <SwipeScreen room={activeRoom}
+      authUser={authUser}
       onBack={()=>setScreen("home")}
       onViewMatches={()=>setScreen("matches")}
       onMatch={(r)=>{ setActiveRoom({...r}); persistRoom(r); }}
@@ -749,7 +750,7 @@ function FindPartner({ currentUser, setRooms, onBack, onJoinRoom, persistRoom })
 // ─── SWIPE SCREEN ─────────────────────────────────────────────────────────────
 const ALL_GENRES = ["Action","Adventure","Animation","Comedy","Crime","Documentary","Drama","Family","Fantasy","History","Horror","Music","Mystery","Romance","Sci-Fi","Thriller","War","Western","Sci-Fi & Fantasy","Action & Adventure","Kids","Reality"];
 
-function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
+function SwipeScreen({ room, authUser, onBack, onMatch, onViewMatches, persistRoom }) {
   const [swipes, setSwipes]     = useState({...room.userSwipes});
   const [newMatch, setNewMatch] = useState(null);
   const [dragX, setDragX]       = useState(0);
@@ -764,6 +765,8 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
   const [catalogPage, setCatalogPage] = useState(0);
   const [exhausted, setExhausted] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [newReleasesOnly, setNewReleasesOnly] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const dragStart = useRef(null);
   const exitingRef = useRef(false);
   const loadingRef = useRef(false);
@@ -833,6 +836,21 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
     loadingRef.current = false;
   };
 
+  const resetSwipes = async () => {
+    await supabase.from("swipes")
+      .delete()
+      .eq("user_id", authUser.id)
+      .eq("room_id", room.id);
+    const cleared = {};
+    setSwipes(cleared);
+    room.userSwipes = cleared;
+    setTitles([]);
+    setCatalogPage(0);
+    setExhausted(false);
+    loadingRef.current = false;
+    loadMore(0);
+  };
+
   const fullQueue = titles;
 
   // Apply filters to queue — memoized to avoid recomputing on every drag event
@@ -840,8 +858,12 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
     if (contentType==="movie" && t.type!=="movie") return false;
     if (contentType==="tv" && t.type!=="tv") return false;
     if (selectedGenres.length>0 && !t.genres.some(g=>selectedGenres.includes(g))) return false;
+    if (newReleasesOnly) {
+      const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      if (!t.release_date || new Date(t.release_date) < cutoff) return false;
+    }
     return true;
-  }), [fullQueue, contentType, selectedGenres]);
+  }), [fullQueue, contentType, selectedGenres, newReleasesOnly]);
 
   const filteredIdx = useMemo(() => queue.findIndex(t=>!swipes[t.id]), [queue, swipes]);
   const current  = filteredIdx >= 0 ? queue[filteredIdx] : undefined;
@@ -922,6 +944,16 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
             </div>
           </div>
 
+          {/* New Releases toggle */}
+          <div style={{marginBottom:10}}>
+            <button
+              onClick={() => setNewReleasesOnly(p => !p)}
+              style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${newReleasesOnly?"#f97316":"rgba(255,255,255,0.12)"}`,background:newReleasesOnly?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:newReleasesOnly?"#f97316":"#999",fontSize:11,cursor:"pointer"}}
+            >
+              🆕 New Releases
+            </button>
+          </div>
+
           {/* Genre filter */}
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
@@ -938,9 +970,15 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
             </div>
           </div>
 
-          <div style={{...S.muted,fontSize:11,marginTop:10,textAlign:"center"}}>
-            {unswiped} titles match your filters
+          <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,0.08)",paddingTop:12}}>
+            <button
+              onClick={()=>setShowResetConfirm(true)}
+              style={{width:"100%",padding:"9px",borderRadius:9,border:"1px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.08)",color:"#ef4444",fontSize:12,fontWeight:700,cursor:"pointer"}}
+            >
+              Reset Swipes
+            </button>
           </div>
+
         </div>
       )}
 
@@ -1049,6 +1087,19 @@ function SwipeScreen({ room, onBack, onMatch, onViewMatches, persistRoom }) {
           {newMatch.poster?<img src={newMatch.poster} style={{width:65,height:97,objectFit:"cover",borderRadius:8,boxShadow:"0 4px 20px rgba(0,0,0,0.6)"}}/>:<div style={{fontSize:40}}>🎉</div>}
           <div style={{fontWeight:800,fontSize:20}}>It's a Match!</div>
           <div style={{opacity:0.85,fontSize:13,textAlign:"center",maxWidth:180}}>{newMatch.title}</div>
+        </div>
+      )}
+
+      {showResetConfirm && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{background:"rgba(20,20,32,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:16,padding:24,maxWidth:300,width:"100%"}}>
+            <div style={{color:"#fff",fontWeight:700,fontSize:15,marginBottom:8}}>Reset Swipe History?</div>
+            <div style={{color:"rgba(255,255,255,0.5)",fontSize:13,lineHeight:1.5,marginBottom:20}}>Are you sure you want to reset your swipe history? This cannot be undone.</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setShowResetConfirm(false)} style={{flex:1,padding:"10px",borderRadius:9,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.05)",color:"#fff",fontSize:13,cursor:"pointer"}}>Cancel</button>
+              <button onClick={async()=>{ setShowResetConfirm(false); await resetSwipes(); }} style={{flex:1,padding:"10px",borderRadius:9,border:"1px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.15)",color:"#ef4444",fontSize:13,fontWeight:700,cursor:"pointer"}}>Reset</button>
+            </div>
+          </div>
         </div>
       )}
     </div></div>
@@ -1336,7 +1387,6 @@ function TutorialScreen({ profile, catalog, onComplete }) {
   const [dragging, setDragging]     = useState(false);
   const [exiting, setExiting]       = useState(null);
   const [wrongSwipe, setWrongSwipe] = useState(false);
-  const [bellTapped, setBellTapped] = useState(false);
   const dragStart = useRef(null);
   const exitingRef = useRef(false);
 
@@ -1345,7 +1395,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
     services: ["Netflix","Disney+","Max","Prime Video","Hulu","Apple TV+","Peacock","Paramount+","Crunchyroll"]
   };
 
-  // Steps: 0=intro, 1=home, 2=find partner, 3=room created, 4=swipe left, 5=swipe right, 6=match, 7=notifications, 8=watched, 9=done
+  // Steps: 0=intro, 1=home, 2=find partner, 3=room created, 4=swipe left, 5=swipe right, 6=match, 7=watched, 8=done
   const steps = [
     { kernel: "Hey! I'm Kernel. Part popcorn, part genius, full-time movie enthusiast. 🍿", sub: "I'll be your guide today. Try not to spill me." },
     { kernel: "Welcome to your home screen! This is where the magic happens.", sub: "Or where nothing happens if you don't find a partner. No pressure." },
@@ -1354,7 +1404,6 @@ function TutorialScreen({ profile, catalog, onComplete }) {
     { kernel: "Welcome to your swipe room! Now pay attention — this is important.", sub: "Swipe LEFT on anything you'd rather watch paint dry than sit through." },
     { kernel: "Now swipe RIGHT on something you actually want to watch!", sub: "Go on, I already liked it. We're basically soulmates now. ❤️❤️" },
     { kernel: "BOOM — a match! 🎉 You have great taste. Kernel approves.", sub: "Tap that ❤️ button up top to see all your matches!" },
-    { kernel: "These are your matches! They only show up here when BOTH of you swipe right.", sub: "Tap the 🔔 bell on the home screen — that's where I'll ping you when new matches happen!" },
     { kernel: "Once you've actually watched something — mark it! ✅", sub: "Hit 'Mark Watched' and it'll move to your watched pile. Kernel keeps track of everything." },
     { kernel: "Look at you! All grown up and ready to swipe! 🎬", sub: "Captain Kernel believes in you. Now go find something great to watch." },
   ];
@@ -1426,6 +1475,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px 32px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:12,background:"linear-gradient(to top, rgba(14,14,26,0.98) 60%, transparent)"}}>
         <KernelBubble message={current.kernel} subtext={current.sub}/>
         <button style={{...S.btn,width:"100%"}} onClick={next}>Got it! →</button>
+        <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",marginTop:8}}>Skip tutorial</button>
       </div>
     </div>
   );
@@ -1449,6 +1499,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
       </div>
       <div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
         <KernelBubble message={current.kernel} subtext={current.sub}/>
+        <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",marginTop:8}}>Skip tutorial</button>
       </div>
     </div>
   );
@@ -1476,6 +1527,7 @@ function TutorialScreen({ profile, catalog, onComplete }) {
       </div>
       <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center"}}>
         <KernelBubble message={current.kernel} subtext={current.sub}/>
+        <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",marginTop:8}}>Skip tutorial</button>
       </div>
     </div>
   );
@@ -1521,8 +1573,9 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           </div>
           {wrongSwipe&&<div style={{color:"#f97316",fontSize:12,textAlign:"center",marginTop:8,animation:"slideUp 0.3s ease"}}>👈 Wrong way! Kernel points LEFT — hit that ✕!</div>}
         </div>
-        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
           <KernelBubble message={wrongSwipe?"Wrong way, superstar! Kernel points left! ← That one!":current.kernel} subtext={wrongSwipe?"Swipe left = skip. You've got this!":current.sub}/>
+          <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",marginTop:8}}>Skip tutorial</button>
         </div>
       </div></div>
     );
@@ -1577,8 +1630,9 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           </div>
           {wrongSwipe&&<div style={{color:"#f97316",fontSize:12,textAlign:"center",marginTop:8,animation:"slideUp 0.3s ease"}}>👉 Other way! Flixie believes in you. Mostly.</div>}
         </div>
-        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
           <KernelBubble message={wrongSwipe?"Wrong button, champ! Tap the ♥ — Kernel's rooting for you! 💪":current.kernel} subtext={wrongSwipe?"Swipe right = want to watch. Almost there!":current.sub}/>
+          <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",marginTop:8}}>Skip tutorial</button>
         </div>
       </div></div>
     );
@@ -1598,72 +1652,22 @@ function TutorialScreen({ profile, catalog, onComplete }) {
         <p style={S.muted}>You've swiped everything in this demo.</p>
         <button style={S.btn} onClick={next}>See 1 Match →</button>
       </div>
-      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
         <KernelBubble message={current.kernel} subtext={current.sub}/>
+        <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",marginTop:8}}>Skip tutorial</button>
       </div>
     </div></div>
   );
 
-  // ── STEP 7: Notifications — fake home screen with bell ──
-  if (step === 7) {
-    return (
-      <div style={S.page}>
-        <div style={S.shell}>
-          <header style={S.hdr}>
-            <div style={S.logo}>DuoFlix</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              {/* Pulsing bell with notification badge */}
-              <div style={{position:"relative"}}>
-                <button
-                  onClick={()=>{ setBellTapped(true); setTimeout(next, 1200); }}
-                  style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.8)",fontSize:16,padding:"6px 10px",cursor:"pointer",animation:bellTapped?"none":"pulse 1.2s ease infinite"}}>
-                  🔔
-                  {!bellTapped&&<span style={{position:"absolute",top:-4,right:-4,background:"#ef4444",borderRadius:"50%",width:16,height:16,fontSize:10,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>1</span>}
-                </button>
-                {bellTapped&&(
-                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"rgba(24,24,36,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,zIndex:50,minWidth:240,overflow:"hidden",animation:"slideUp 0.3s ease"}}>
-                    <div style={{padding:"12px 16px 8px",color:"#fff",fontWeight:700,fontSize:13,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>Notifications</div>
-                    <div style={{padding:"10px 16px"}}>
-                      <div style={{color:"#fff",fontSize:13}}>🎉 You matched on "The Popcorn Chronicles"!</div>
-                      <div style={{color:"rgba(255,255,255,0.3)",fontSize:11,marginTop:2}}>Just now</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div style={{background:"rgba(255,255,255,0.08)",borderRadius:20,color:"#fff",fontSize:13,fontWeight:600,padding:"6px 14px"}}>
-                {profile?.name?.split(" ")[0]||"You"} ▾
-              </div>
-            </div>
-          </header>
-          <div style={{color:"#fff",fontSize:22,fontWeight:700}}>Hey, {profile?.name?.split(" ")[0]||"there"} 👋</div>
-          <div style={{...S.muted,marginBottom:20}}>Your watch rooms</div>
-          <div style={{...S.roomCard}}>
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:40,height:56,background:"rgba(255,255,255,0.07)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🍿</div>
-              <div>
-                <div style={{color:"#fff",fontWeight:600}}>Kernel 🍿</div>
-                <div style={S.muted}>❤️ 1 match · 100% swiped</div>
-              </div>
-            </div>
-            <div style={{color:"rgba(255,255,255,0.25)",fontSize:20}}>→</div>
-          </div>
-        </div>
-        <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
-          <KernelBubble message={bellTapped?"There it is! 🔔 That's how Kernel gets your attention when something exciting happens!":current.kernel} subtext={bellTapped?"Now go check those matches!":current.sub}/>
-        </div>
-      </div>
-    );
-  }
-
-  // ── STEP 8: Watched ──
-  if (step === 8) return (
+  // ── STEP 7: Watched ──
+  if (step === 7) return (
     <div style={S.page}><div style={S.shell}>
       <header style={S.hdr}>
         <button style={S.back}>←</button>
         <div style={S.logo}>Matches ❤️</div>
         <div style={{width:40}}/>
       </header>
-      <p style={{...S.muted,marginBottom:12}}>You & Flixie both want to watch:</p>
+      <p style={{...S.muted,marginBottom:12}}>You & Kernel both want to watch:</p>
       {!watchedIt ? (
         <div style={{overflowY:"auto"}}>
           <div style={{...S.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Up Next (1)</div>
@@ -1698,13 +1702,14 @@ function TutorialScreen({ profile, catalog, onComplete }) {
           </div>
         </div>
       )}
-      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",justifyContent:"center"}}>
+      <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,padding:"0 20px",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
         <KernelBubble message={watchedIt ? "Look at you, a person who finishes things! ✅" : current.kernel} subtext={watchedIt ? "Your partner sees it too. The watched list is sacred ground." : current.sub}/>
+        <button onClick={onComplete} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",marginTop:8}}>Skip tutorial</button>
       </div>
     </div></div>
   );
 
-  // ── STEP 9: Done! ──
+  // ── STEP 8: Done! ──
   return (
     <div style={{...S.page, flexDirection:"column", justifyContent:"flex-start", alignItems:"center", padding:"40px 28px 40px", boxSizing:"border-box", gap:28, overflowY:"auto"}}>
       <div style={S.bigLogo}>DuoFlix</div>
@@ -1715,6 +1720,21 @@ function TutorialScreen({ profile, catalog, onComplete }) {
         <div style={{color:"#fff",fontSize:26,fontWeight:800,marginBottom:12}}>Look at you! 🎉</div>
         <div style={{color:"rgba(255,255,255,0.6)",fontSize:15,lineHeight:1.7}}>{current.kernel}</div>
         <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,lineHeight:1.6,marginTop:8}}>{current.sub}</div>
+      </div>
+      <div style={{width:"100%",marginTop:16,marginBottom:4}}>
+        <div style={{color:"#f97316",fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Additional Features</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[
+            "Access \"My Movies\" to swipe your own personal list of movies",
+            "Click the Gear icon to access filter settings to find what matches your mood",
+            "View your own personal stats by accessing your Profile",
+          ].map((txt,i) => (
+            <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+              <span style={{color:"#f97316",fontSize:13,lineHeight:1.5}}>•</span>
+              <span style={{color:"rgba(255,255,255,0.75)",fontSize:12,lineHeight:1.5}}>{txt}</span>
+            </div>
+          ))}
+        </div>
       </div>
       <button style={{...S.btn,width:"100%",fontSize:16,padding:"14px"}} onClick={onComplete}>
         Let's Start Swiping! 🍿
@@ -1935,6 +1955,8 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
   const [services, setServices]             = useState(filters.services || []);
   const [contentType, setContentType]       = useState(filters.contentType || "both");
   const [selectedGenres, setSelectedGenres] = useState(filters.genres || []);
+  const [newReleasesOnly, setNewReleasesOnly] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const dragStart  = useRef(null);
   const exitingRef = useRef(false);
   const loadingRef = useRef(false);
@@ -2016,8 +2038,12 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
       if (contentType==="movie" && t.type!=="movie") return false;
       if (contentType==="tv"    && t.type!=="tv")    return false;
       if (selectedGenres?.length > 0 && !t.genres?.some(g => selectedGenres.includes(g))) return false;
+      if (newReleasesOnly) {
+        const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+        if (!t.release_date || new Date(t.release_date) < cutoff) return false;
+      }
       return true;
-    }), [titles, likedIds, skippedIds, contentType, selectedGenres]);
+    }), [titles, likedIds, skippedIds, contentType, selectedGenres, newReleasesOnly]);
 
   const current  = queue[0];
   const done     = !current && exhausted && !loadingInit;
@@ -2087,6 +2113,16 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
               </button>
             ))}
           </div>
+          {/* New Releases toggle */}
+          <div style={{marginBottom:10}}>
+            <button
+              onClick={() => setNewReleasesOnly(p => !p)}
+              style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${newReleasesOnly?"#f97316":"rgba(255,255,255,0.12)"}`,background:newReleasesOnly?"rgba(249,115,22,0.15)":"rgba(255,255,255,0.04)",color:newReleasesOnly?"#f97316":"#999",fontSize:11,cursor:"pointer"}}
+            >
+              🆕 New Releases
+            </button>
+          </div>
+
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <div style={{...S.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Genres {selectedGenres.length>0&&<span style={{color:"#f97316"}}>({selectedGenres.length})</span>}</div>
             {selectedGenres.length>0&&<button onClick={()=>setSelectedGenres([])} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",fontSize:11,cursor:"pointer"}}>Clear</button>}
@@ -2101,7 +2137,7 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
           </div>
           <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,0.08)",paddingTop:12}}>
             <button
-              onClick={resetSwipes}
+              onClick={()=>setShowResetConfirm(true)}
               style={{width:"100%",padding:"9px",borderRadius:9,border:"1px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.08)",color:"#ef4444",fontSize:12,fontWeight:700,cursor:"pointer"}}
             >
               Reset Swipes
@@ -2205,6 +2241,19 @@ function SoloSwipeScreen({ authUser, filters, onBack }) {
           <div style={{display:"flex",gap:40,marginTop:18}}>
             <button style={{...S.swipeBtn,borderColor:"rgba(239,68,68,0.5)",color:"#ef4444",background:"rgba(239,68,68,0.1)"}} onClick={()=>swipe("pass")}>✕</button>
             <button style={{...S.swipeBtn,borderColor:"rgba(34,197,94,0.5)",color:"#22c55e",background:"rgba(34,197,94,0.1)"}} onClick={()=>swipe("like")}>♥</button>
+          </div>
+        </div>
+      )}
+
+      {showResetConfirm && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{background:"rgba(20,20,32,0.98)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:16,padding:24,maxWidth:300,width:"100%"}}>
+            <div style={{color:"#fff",fontWeight:700,fontSize:15,marginBottom:8}}>Reset Swipe History?</div>
+            <div style={{color:"rgba(255,255,255,0.5)",fontSize:13,lineHeight:1.5,marginBottom:20}}>Are you sure you want to reset your swipe history? This cannot be undone.</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setShowResetConfirm(false)} style={{flex:1,padding:"10px",borderRadius:9,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.05)",color:"#fff",fontSize:13,cursor:"pointer"}}>Cancel</button>
+              <button onClick={async()=>{ setShowResetConfirm(false); await resetSwipes(); }} style={{flex:1,padding:"10px",borderRadius:9,border:"1px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.15)",color:"#ef4444",fontSize:13,fontWeight:700,cursor:"pointer"}}>Reset</button>
+            </div>
           </div>
         </div>
       )}
